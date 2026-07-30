@@ -3,7 +3,7 @@
 // (usuario.github.io/gym/), no en la raíz del dominio.
 
 // Subir la versión al añadir archivos: fuerza a reconstruir la caché en los móviles.
-const CACHE = 'gym-v3';
+const CACHE = 'gym-v4';
 const SHELL = [
   './',
   './index.html',
@@ -12,6 +12,9 @@ const SHELL = [
   './store.js',
   './routines.js',
   './progression.js',
+  './i18n.js',
+  './lang-ca.js',
+  './lang-en.js',
   './moves.js',
   './nutrition.js',
   './manifest.webmanifest',

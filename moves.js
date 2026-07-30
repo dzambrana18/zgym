@@ -118,12 +118,6 @@ export const MOVES = {
     a: S('M40 31 V55') + S('M60 31 V55') + DB(40, 57) + DB(60, 57),
     b: S('M40 31 L20 38') + S('M60 31 L80 38') + S('M14 34 V44') + S('M86 34 V44'),
   },
-  // Tumbada de lado en banco inclinado: la tensión máxima está abajo, no arriba
-  'lateral-inclinado': {
-    base: S('M12 84 L58 44') + S('M12 84 H32') + S('M18 84 V92'),
-    a: C(60, 40, 6.5) + S('M24 78 L54 50') + S('M40 66 L58 74') + DB(60, 76) + S('M26 80 L20 92'),
-    b: C(60, 40, 6.5) + S('M24 78 L54 50') + S('M40 66 L72 44') + DB(76, 40) + S('M26 80 L20 92'),
-  },
 
   // ---------------------------------------------------------------- piernas
   sentadilla: {

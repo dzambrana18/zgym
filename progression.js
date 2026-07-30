@@ -70,6 +70,7 @@ export function suggest(exercise, records, week) {
     return {
       weight: exercise.startLoad,
       reason: 'Primera vez: carga inicial del plan. Ajústala hasta que el RIR objetivo sea real.',
+      reasonKey: 'sugStart', reasonArgs: [],
       last: null,
       action: 'start',
     };
@@ -88,6 +89,7 @@ export function suggest(exercise, records, week) {
     return {
       weight,
       reason: 'Semana de descarga: mismo peso, la mitad de las series y lejos del fallo.',
+      reasonKey: 'sugDeload', reasonArgs: [],
       last: last_,
       action: 'deload',
     };
@@ -107,6 +109,7 @@ export function suggest(exercise, records, week) {
     return {
       weight,
       reason: `Aún no has llegado a ${exercise.repMax} en todas las series: repite el peso e intenta sumar 1 repetición.`,
+      reasonKey: 'sugHoldReps', reasonArgs: [exercise.repMax],
       last: last_,
       action: 'hold',
     };
@@ -115,6 +118,7 @@ export function suggest(exercise, records, week) {
     return {
       weight,
       reason: `Llegaste al tope, pero sin margen (RIR por debajo de ${fmt(gate)}): consolida el peso una sesión más.`,
+      reasonKey: 'sugHoldRir', reasonArgs: [fmt(gate)],
       last: last_,
       action: 'hold',
     };
@@ -126,6 +130,8 @@ export function suggest(exercise, records, week) {
       reason: bodyweight
         ? `Tope del rango completado: añade 2,5 kg de lastre o sube a ${exercise.repMax + 2} repeticiones.`
         : 'Tope del rango completado.',
+      reasonKey: bodyweight ? 'sugLoadBw' : 'sugLoadPlain',
+      reasonArgs: bodyweight ? [exercise.repMax + 2] : [],
       last: last_,
       action: 'load',
     };
@@ -136,6 +142,8 @@ export function suggest(exercise, records, week) {
   return {
     weight: next,
     reason: `Completaste ${exercise.repMax} reps en todas las series con margen, así que ${verb} ${fmt(next)} kg.`,
+    reasonKey: exercise.assist ? 'sugUpAssist' : 'sugUp',
+    reasonArgs: [exercise.repMax, fmt(next)],
     last: last_,
     action: 'up',
   };

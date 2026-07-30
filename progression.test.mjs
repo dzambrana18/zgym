@@ -142,16 +142,76 @@ assert.equal(allExercises('david').length, 32, 'David: 32 ejercicios');
 
 // Material que el gimnasio no tiene: no debe quedar ni rastro
 const todos = [...allExercises('anna'), ...allExercises('david')];
+// Se mira el NOMBRE, no la explicación: un cue puede mencionar el pec-deck para decir
+// justamente que ese ejercicio lo sustituye, y eso es correcto.
 for (const ex of todos) {
-  const t = `${ex.name} ${ex.cue} ${ex.video}`.toLowerCase();
-  assert.ok(!/pec[- +]?deck/.test(t), `${ex.key}: sigue mencionando el pec-deck`);
-  assert.ok(!t.includes('colgado'), `${ex.key}: sigue habiendo elevación de piernas colgado`);
-  assert.ok(!t.includes('femoral sentad'), `${ex.key}: curl femoral sentado, tiene que ser tumbado`);
-  assert.ok(!/sobre la cabeza|por encima de la cabeza/.test(t), `${ex.key}: tríceps desde abajo`);
+  const n = `${ex.name} ${ex.video}`.toLowerCase();
+  assert.ok(!/pec[- +]?deck/.test(n), `${ex.key}: sigue prescribiendo el pec-deck`);
+  assert.ok(!n.includes('colgado'), `${ex.key}: sigue habiendo elevación de piernas colgado`);
+  assert.ok(!n.includes('femoral sentad'), `${ex.key}: curl femoral sentado, tiene que ser tumbado`);
+  assert.ok(!/sobre la cabeza|por encima de la cabeza/.test(n), `${ex.key}: tríceps desde abajo`);
 }
 // No hay patrones dibujados que nadie use
 const usados = new Set(todos.map((e) => e.pattern));
 assert.deepEqual(Object.keys(MOVES).filter((k) => !usados.has(k)), [], 'patrones de animación sin usar');
+
+// --- idiomas ---------------------------------------------------------------
+// Los tres diccionarios tienen que cubrir exactamente lo mismo. Si no, la app
+// mezclaría idiomas: textos en español apareciendo dentro de la versión inglesa.
+{
+  const { UI_ES } = await import('./i18n.js');
+  const { CA } = await import('./lang-ca.js');
+  const { EN } = await import('./lang-en.js');
+  const { USERS, allExercises } = await import('./routines.js');
+  const { MEALS, SAMPLE_DAY } = await import('./nutrition.js');
+
+  const clavesUI = Object.keys(UI_ES).sort();
+  for (const [nombre, pack] of [['ca', CA], ['en', EN]]) {
+    assert.deepEqual(Object.keys(pack.ui).sort(), clavesUI,
+      `${nombre}: las claves de interfaz no coinciden con el español`);
+    for (const k of clavesUI) {
+      const a = UI_ES[k], b = pack.ui[k];
+      assert.equal(typeof b, typeof a, `${nombre}.ui.${k}: tipo distinto`);
+      if (Array.isArray(a)) assert.equal(b.length, a.length, `${nombre}.ui.${k}: longitud distinta`);
+      else assert.ok(String(b).trim().length > 0, `${nombre}.ui.${k}: vacío`);
+      // Los marcadores {0}, {1}... deben conservarse o la frase saldrá incompleta
+      const ph = (s) => (String(s).match(/\{\d\}/g) || []).sort().join(',');
+      if (!Array.isArray(a)) assert.equal(ph(b), ph(a), `${nombre}.ui.${k}: marcadores {n} distintos`);
+    }
+  }
+
+  const ejercicios = [...allExercises('anna'), ...allExercises('david')];
+  const dias = Object.values(USERS).flatMap((u) => u.days);
+  for (const [nombre, pack] of [['ca', CA], ['en', EN]]) {
+    for (const ex of ejercicios) {
+      const tr = pack.ex[ex.key];
+      assert.ok(tr, `${nombre}: falta el ejercicio ${ex.key}`);
+      assert.ok(tr.name?.trim() && tr.cue?.trim(), `${nombre}/${ex.key}: nombre o explicación vacíos`);
+    }
+    for (const d of dias) {
+      const tr = pack.days[d.key];
+      assert.ok(tr?.name && tr?.subtitle && tr?.warmup, `${nombre}: día ${d.key} incompleto`);
+    }
+    for (const m of MEALS) {
+      const tr = pack.meals[m.key];
+      assert.ok(tr, `${nombre}: falta la receta ${m.key}`);
+      assert.equal(tr.ingredients.length, m.ingredients.length, `${nombre}/${m.key}: nº de ingredientes distinto`);
+      assert.equal(tr.steps.length, m.steps.length, `${nombre}/${m.key}: nº de pasos distinto`);
+      assert.equal(Boolean(tr.tip), Boolean(m.tip), `${nombre}/${m.key}: el consejo sobra o falta`);
+    }
+    for (const u of Object.keys(USERS)) {
+      assert.ok(pack.users[u]?.subtitle, `${nombre}: falta el subtítulo de ${u}`);
+      for (const c of ['estrategia', 'detalle', 'proteinaNota']) {
+        assert.ok(pack.targets[u]?.[c], `${nombre}: falta targets.${u}.${c}`);
+      }
+    }
+    // Las etiquetas de las tomas del día de ejemplo
+    const slots = [...new Set(Object.values(SAMPLE_DAY).flat().map((i) => i.slot))];
+    for (const s of slots) assert.ok(pack.slots[s], `${nombre}: falta la toma "${s}"`);
+    assert.equal(pack.ui.wd.length, 7, `${nombre}: faltan días de la semana`);
+  }
+  console.log(`   idiomas: es + ca + en · ${clavesUI.length} textos de interfaz, ${ejercicios.length} ejercicios, ${MEALS.length} recetas`);
+}
 
 // --- versión ---------------------------------------------------------------
 // La constante de app.js y version.json TIENEN que ir a la par: si se desincronizan,

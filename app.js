@@ -1,6 +1,10 @@
-import { USERS, findDay, allExercises, videoUrl, todaysDay, nextDay } from './routines.js';
+import { USERS, findDay, allExercises, videoUrl, todaysDay, nextDay, weekdayIndex } from './routines.js';
 import { moveSvg } from './moves.js';
 import { TARGETS, MEALS, SAMPLE_DAY, mealByKey, dayTotals, shoppingList } from './nutrition.js';
+import {
+  t, getLang, setLang, LANGS, locale, exName, exCue, dayName, daySubtitle, dayWarmup,
+  mealName, mealTip, mealIngredients, mealSteps, userSubtitle, targetField, weekdayName, slotName,
+} from './i18n.js';
 import * as db from './store.js';
 import {
   mesocycleWeek, isDeload, targetRir, effectiveSets, e1rm, groupSessions, suggest, fmt,
@@ -9,7 +13,7 @@ import {
 // Versión de esta copia de la app. Va emparejada con version.json, que se sirve
 // SIEMPRE desde la red: si no coinciden es que el móvil tiene una copia vieja
 // cacheada. progression.test.mjs comprueba que las dos no se desincronicen.
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 
 const app = document.getElementById('app');
 const state = { user: db.getUser(), view: 'home', dayKey: null, open: null, exKey: null, meal: null, override: {}, draft: {} };
@@ -66,7 +70,7 @@ function tickRest() {
   document.getElementById('rest-count').textContent = (left < 0 ? '+' : '') + mmss(left);
   document.getElementById('rest-label').textContent = rest.label;
   document.getElementById('rest-sub').textContent =
-    left < 0 ? 'Descanso cumplido · a por la siguiente' : `objetivo ${restLabel(rest.total)}`;
+    left < 0 ? t('restDone') : t('restTarget', restLabel(rest.total));
   restEl.classList.toggle('over', left < 0);
   if (left === 0 && navigator.vibrate) navigator.vibrate([160, 90, 160]);
 }
@@ -81,7 +85,7 @@ document.getElementById('rest-add').onclick = () => { if (rest.until) { rest.unt
 function chart(series) {
   const live = series.filter((s) => s.points.length > 0);
   if (live.length === 0 || live.every((s) => s.points.length < 2)) {
-    return `<p class="muted">Hacen falta al menos dos registros para dibujar la evolución.</p>`;
+    return `<p class="muted">${t('needTwo')}</p>`;
   }
   const W = 320, H = 150, PL = 40, PR = 6, PT = 10, PB = 20;
   // Las cifras grandes (tonelaje) se redondean a entero: con decimales el eje se solapa con el trazo.
@@ -114,8 +118,8 @@ function chart(series) {
     return `${area}<polyline class="${i ? 'ln2' : 'ln'}" points="${pts}"/>${dots}`;
   }).join('');
 
-  const dl = new Date(minX).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-  const dr = new Date(maxX).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  const dl = new Date(minX).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
+  const dr = new Date(maxX).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">
     <defs><linearGradient id="${gid}" x1="0" x2="0" y1="0" y2="1">
       <stop offset="0%" stop-color="#c3f400" stop-opacity="0.22"/>
@@ -147,11 +151,11 @@ function dayProgress(u, day, week) {
 
 function lastDoneText(u, day) {
   const dates = [...new Set(db.getSets(u).filter((s) => s.dayKey === day.key && s.reps > 0).map((s) => s.loggedAt))].sort();
-  if (dates.length === 0) return 'Nunca registrada';
+  if (dates.length === 0) return t('neverLogged');
   const days = Math.round((Date.parse(db.todayISO()) - Date.parse(dates.at(-1))) / 86400000);
-  if (days === 0) return 'Hecha hoy';
-  if (days === 1) return 'Ayer';
-  return `Hace ${days} días`;
+  if (days === 0) return t('doneToday');
+  if (days === 1) return t('yesterday');
+  return t('daysAgo', days);
 }
 
 // ---------------------------------------------------------------------------
@@ -162,13 +166,13 @@ function viewChooser() {
   app.innerHTML = `
     <div class="chooser">
       <div class="head">
-        <div class="kicker">Registro de entrenamiento</div>
-        <h1>¿Quién entrena?</h1>
+        <div class="kicker">${t('chooserKicker')}</div>
+        <h1>${t('chooserTitle')}</h1>
       </div>
       ${Object.entries(USERS).map(([k, v]) => `
         <button class="card tap" data-pick="${k}">
           <h2>${esc(v.name)}</h2>
-          <p class="muted" style="margin:8px 0 0">${esc(v.subtitle)}</p>
+          <p class="muted" style="margin:8px 0 0">${esc(userSubtitle(k, v))}</p>
         </button>`).join('')}
     </div>`;
   app.querySelectorAll('[data-pick]').forEach((b) => {
@@ -182,15 +186,15 @@ function hoyBanner(u) {
   if (hoy) {
     const p = dayProgress(u, hoy, mesocycleWeek(db.getMesocycleStart(u), db.todayISO()));
     return `<div class="note today-note">
-      <strong>Hoy toca ${esc(hoy.name)}</strong> — ${esc(hoy.subtitle)}.
-      ${p.done >= p.total && p.total > 0 ? ' Ya la has completado, buen trabajo.' : ''}
+      <strong>${t('todayIs', esc(dayName(hoy)))}</strong> — ${esc(daySubtitle(hoy))}.
+      ${p.done >= p.total && p.total > 0 ? t('todayDone') : ''}
     </div>`;
   }
   const sig = nextDay(u);
   return `<div class="note">
-    <strong>Hoy toca descansar.</strong> ${sig
-      ? `La próxima sesión es <strong>${esc(sig.day.name)}</strong>, ${sig.enDias === 1 ? 'mañana' : `en ${sig.enDias} días`}.`
-      : ''} Descansar forma parte del plan: es cuando el músculo se construye.
+    <strong>${t('restDay')}</strong> ${sig
+      ? t('nextSession', esc(dayName(sig.day)), sig.enDias === 1 ? t('tomorrow') : t('inDays', sig.enDias))
+      : ''} ${t('restIsPlan')}
   </div>`;
 }
 
@@ -202,24 +206,23 @@ function viewHome() {
   const lastBody = body.at(-1);
 
   app.innerHTML = `
-    ${header(user.name, user.subtitle, false)}
+    ${header(user.name, userSubtitle(u, user), false)}
     <div class="week ${dl ? 'deload' : ''}">
       <div class="row">
         <div>
-          <div class="lbl">Semana del mesociclo</div>
-          <div class="big">${week} <span style="font-size:15px;opacity:.8">de 5</span></div>
+          <div class="lbl">${t('mesoWeek')}</div>
+          <div class="big">${week} <span style="font-size:15px;opacity:.8">${t('mesoOf')}</span></div>
         </div>
         <div style="text-align:right">
-          <div class="lbl">RIR objetivo</div>
+          <div class="lbl">${t('rirTarget')}</div>
           <div class="big">${esc(user.weekLabels[week - 1])}</div>
         </div>
       </div>
       <div class="week-grid">${[1, 2, 3, 4, 5].map((w) => `<div class="week-dot ${w <= week ? 'on' : ''}"></div>`).join('')}</div>
-      <div class="hint">${dl
-        ? 'Descarga: mismo peso, la mitad de las series y lejos del fallo. No la saltes.'
-        : week === 3 ? 'Se añade una serie al primer ejercicio de cada sesión.'
-        : week === 4 ? 'Semana pico: la más dura del bloque.'
-        : 'Anota cada serie. Lo que no se anota, no progresa.'}</div>
+      <div class="hint">${dl ? t('hintDeload')
+        : week === 3 ? t('hintWeek3')
+        : week === 4 ? t('hintWeek4')
+        : t('hintDefault')}</div>
     </div>
 
     ${hoyBanner(u)}
@@ -231,9 +234,9 @@ function viewHome() {
       return `<button class="card tap ${esHoy ? 'today' : ''}" data-day="${d.key}">
         <div class="row">
           <div style="min-width:0">
-            <div class="kicker">${esc(d.weekday)}${esHoy ? ' <span class="chip-hoy">Hoy</span>' : ''}</div>
-            <h2>${esc(d.name)}</h2>
-            <p class="muted" style="margin:3px 0 0">${esc(d.subtitle)}</p>
+            <div class="kicker">${esc(weekdayName(weekdayIndex(d)))}${esHoy ? ` <span class="chip-hoy">${t('today')}</span>` : ''}</div>
+            <h2>${esc(dayName(d))}</h2>
+            <p class="muted" style="margin:3px 0 0">${esc(daySubtitle(d))}</p>
           </div>
           <div style="text-align:right;flex:0 0 auto">
             <div class="muted" style="font-size:12px">${esc(lastDoneText(u, d))}</div>
@@ -246,8 +249,8 @@ function viewHome() {
     <button class="card tap" data-go="body">
       <div class="row">
         <div>
-          <div class="kicker">Seguimiento</div>
-          <h2>Peso corporal y cintura</h2>
+          <div class="kicker">${t('trackingKicker')}</div>
+          <h2>${t('bodyCard')}</h2>
         </div>
         <div class="n" style="text-align:right;font-size:19px;color:var(--lime)">
           ${lastBody?.weightKg ? fmt(lastBody.weightKg) + ' kg' : '—'}
@@ -264,7 +267,7 @@ function viewHome() {
 
 function header(title, sub, back) {
   return `<div class="top">
-    ${back ? '<button class="back" id="back">‹ Atrás</button>' : ''}
+    ${back ? `<button class="back" id="back">${t('back')}</button>` : ''}
     <h1>${esc(title)}<span class="sub">${esc(sub)}</span></h1>
   </div>`;
 }
@@ -290,11 +293,21 @@ const ICONS = {
 
 // La barra se construye UNA vez y vive fuera de #app; en cada vista solo cambia
 // qué pestaña está marcada. Así el elemento fijo nunca se destruye ni se recrea.
-const TAB_ITEMS = [['home', 'Entreno'], ['diet', 'Dieta'], ['progress', 'Progreso'], ['settings', 'Ajustes']];
+const TAB_ITEMS = [['home', 'tabHome'], ['diet', 'tabDiet'], ['progress', 'tabProgress'], ['settings', 'tabSettings']];
 const tabsEl = document.getElementById('tabs');
 
-tabsEl.innerHTML = TAB_ITEMS.map(([k, l]) =>
-  `<button data-tab="${k}"><span class="ic">${ICONS[k]}</span>${l}</button>`).join('');
+tabsEl.innerHTML = TAB_ITEMS.map(([k]) =>
+  `<button data-tab="${k}"><span class="ic">${ICONS[k]}</span><span class="lb"></span></button>`).join('');
+
+// Las etiquetas se actualizan por texto, nunca reconstruyendo la barra: recrear un
+// elemento fijo con backdrop-filter es justo lo que descolocaba la barra en iOS.
+function tabLabels() {
+  TAB_ITEMS.forEach(([k, clave]) => {
+    const el = tabsEl.querySelector(`[data-tab="${k}"] .lb`);
+    if (el) el.textContent = t(clave);
+  });
+}
+tabLabels();
 
 tabsEl.querySelectorAll('[data-tab]').forEach((b) => {
   b.onclick = () => { state.view = b.dataset.tab; state.open = null; state.meal = null; render(); };
@@ -302,6 +315,7 @@ tabsEl.querySelectorAll('[data-tab]').forEach((b) => {
 
 function setTab(active) {
   tabsEl.hidden = false;
+  tabLabels();
   tabsEl.querySelectorAll('[data-tab]').forEach((b) => {
     b.classList.toggle('on', b.dataset.tab === active);
   });
@@ -323,21 +337,19 @@ function viewDay() {
   const hoy = todaysDay(u);
   const fuera = !hoy || hoy.key !== day.key;
   const avisoDia = !fuera ? '' : `<div class="note warn">
-    <strong>Hoy no toca esta sesión.</strong> ${hoy
-      ? `Según el plan, hoy te toca <strong>${esc(hoy.name)}</strong>.`
-      : 'Hoy es día de descanso en tu plan.'}
-    Puedes hacerla igual y se registrará con normalidad, pero si cambias el orden a menudo
-    acabarás entrenando unos grupos de más y otros de menos.
+    <strong>${t('offPlanTitle')}</strong>
+    ${hoy ? t('offPlanToday', esc(dayName(hoy))) : t('offPlanRest')}
+    ${t('offPlanWarn')}
   </div>`;
 
   app.innerHTML = `
-    ${header(day.name, `${day.subtitle} · semana ${week} · RIR ${user.weekLabels[week - 1]}`, true)}
+    ${header(dayName(day), `${daySubtitle(day)} · ${t('mesoWeek')} ${week} · RIR ${user.weekLabels[week - 1]}`, true)}
     ${avisoDia}
-    ${isDeload(week) ? '<div class="note warn"><strong>Semana de descarga.</strong> Series reducidas a la mitad y RIR 4: mismo peso, lejos del fallo.</div>' : ''}
+    ${isDeload(week) ? `<div class="note warn"><strong>${t('deloadTitle')}</strong> ${t('deloadBody')}</div>` : ''}
     <div id="ex-list">${day.exercises.map((ex, i) => exerciseCard(u, day, ex, i, week, today)).join('')}</div>
     <details class="card">
-      <summary style="font-weight:600;cursor:pointer">Calentamiento</summary>
-      <p class="cue">${esc(day.warmup)}</p>
+      <summary style="font-weight:600;cursor:pointer">${t('warmup')}</summary>
+      <p class="cue">${esc(dayWarmup(day))}</p>
     </details>`;
 
   wireDay(u, day, week, today);
@@ -354,7 +366,7 @@ function exerciseCard(u, day, ex, i, week, today) {
   const isOpen = state.open === ex.key;
   const bw = ex.unit === 'peso-corporal';
   const w = state.override[ex.key] ?? s.weight;
-  const unitTxt = ex.unit === 'kg-por-mano' ? 'kg por mano' : 'kg';
+  const unitTxt = ex.unit === 'kg-por-mano' ? t('perHand') : 'kg';
 
   const draft = state.draft[ex.key] || {};
   const rows = Array.from({ length: nSets }, (_, k) => {
@@ -367,17 +379,17 @@ function exerciseCard(u, day, ex, i, week, today) {
     const vI = r?.rir ?? d.rir ?? '';
     return `<tr class="${done ? 'done' : ''}" data-set="${k}">
       <td>${k + 1}</td>
-      ${bw ? '' : `<td><input type="number" inputmode="decimal" step="0.5" min="0" data-f="weight" value="${vW}" aria-label="Peso serie ${k + 1}"></td>`}
-      <td><input type="number" inputmode="numeric" min="0" data-f="reps" value="${vR}" placeholder="${ex.repMin}-${ex.repMax}" aria-label="Repeticiones serie ${k + 1}"></td>
-      <td><input type="number" inputmode="numeric" min="0" max="5" step="0.5" data-f="rir" value="${vI}" placeholder="${fmt(target)}" aria-label="RIR serie ${k + 1}"></td>
-      <td style="width:48px"><button class="tick ${done ? 'on' : ''}" data-tick="${k}" aria-label="Guardar serie ${k + 1}">✓</button></td>
+      ${bw ? '' : `<td><input type="number" inputmode="decimal" step="0.5" min="0" data-f="weight" value="${vW}" aria-label="${t('colWeight')} ${k + 1}"></td>`}
+      <td><input type="number" inputmode="numeric" min="0" data-f="reps" value="${vR}" placeholder="${ex.repMin}-${ex.repMax}" aria-label="${t('colReps')} ${k + 1}"></td>
+      <td><input type="number" inputmode="numeric" min="0" max="5" step="0.5" data-f="rir" value="${vI}" placeholder="${fmt(target)}" aria-label="RIR ${k + 1}"></td>
+      <td style="width:48px"><button class="tick ${done ? 'on' : ''}" data-tick="${k}" aria-label="${t('saved')} ${k + 1}">✓</button></td>
     </tr>`;
   }).join('');
 
   return `<div class="card ${doneCount >= nSets ? 'is-done' : ''}" data-ex="${ex.key}">
     <button class="ex-head" data-toggle="${ex.key}" aria-expanded="${isOpen}">
       <span class="ex-idx">${i + 1}</span>
-      <span class="ex-name">${esc(ex.name)}
+      <span class="ex-name">${esc(exName(ex))}
         <span class="ex-spec">${nSets} × ${ex.timed ? `${ex.repMin}-${ex.repMax}″` : `${ex.repMin}-${ex.repMax}`} · RIR ${fmt(target)} · ${restLabel(ex.restSec)}</span>
       </span>
       <span class="ex-state ${doneCount >= nSets ? 'done' : ''}">${doneCount}/${nSets}</span>
@@ -385,24 +397,24 @@ function exerciseCard(u, day, ex, i, week, today) {
 
     ${isOpen ? `
       <div class="suggest">
-        <div class="n">${bw ? 'Peso corporal' : `${fmt(w)} <small>${unitTxt}</small>`}</div>
-        <div class="why">${esc(s.reason)}</div>
-        ${s.last ? `<div class="last">Última vez · ${esc(s.last)}</div>` : ''}
+        <div class="n">${bw ? t('bodyweight') : `${fmt(w)} <small>${unitTxt}</small>`}</div>
+        <div class="why">${t(s.reasonKey, ...(s.reasonArgs || []))}</div>
+        ${s.last ? `<div class="last">${t('lastTime', esc(s.last))}</div>` : ''}
         ${bw ? '' : `<div class="nudge">
           <button data-nudge="-1" aria-label="Bajar peso">−</button>
           <button data-nudge="1" aria-label="Subir peso">+</button>
-          <span class="muted" style="font-size:12px">ajusta si el RIR real no cuadra</span>
+          <span class="muted" style="font-size:12px">${t('nudgeHint')}</span>
         </div>`}
       </div>
       <table class="sets">
-        <thead><tr><th>#</th>${bw ? '' : '<th>Peso</th>'}<th>${ex.timed ? 'Seg.' : 'Reps'}</th><th>RIR</th><th></th></tr></thead>
+        <thead><tr><th>#</th>${bw ? '' : `<th>${t('colWeight')}</th>`}<th>${ex.timed ? t('colSecs') : t('colReps')}</th><th>RIR</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div class="tech">
         ${moveSvg(ex.pattern) || ''}
         <div class="tech-txt">
-          <p class="cue">${esc(ex.cue)}</p>
-          <a class="vid" href="${videoUrl(ex)}" target="_blank" rel="noopener">▶ Ver vídeo real</a>
+          <p class="cue">${esc(exCue(ex))}</p>
+          <a class="vid" href="${videoUrl(ex)}" target="_blank" rel="noopener">${t('watchVideo')}</a>
         </div>
       </div>
     ` : ''}
@@ -438,11 +450,11 @@ function wireDay(u, day, week, today) {
       const idx = Number(btn.dataset.tick);
       const get = (f) => tr.querySelector(`[data-f="${f}"]`)?.value ?? '';
       const reps = get('reps');
-      if (!reps) { toast('Anota las repeticiones antes de marcar la serie'); return; }
+      if (!reps) { toast(t('needReps')); return; }
       const weight = openEx.unit === 'peso-corporal' ? 0 : get('weight');
       captureDraft(openEx.key);
       db.logSet(u, { dayKey: day.key, exerciseKey: openEx.key, setIndex: idx, weight, reps, rir: get('rir') });
-      startRest(openEx.restSec, `${openEx.name} · serie ${idx + 1}`);
+      startRest(openEx.restSec, `${exName(openEx)} · ${idx + 1}`);
       render();
       sync(true);
     };
@@ -493,31 +505,27 @@ function summarize(u) {
 function viewSummary(u) {
   const s = summarize(u);
   if (s.totalSesiones === 0) {
-    return `<div class="card"><div class="kicker">Resumen</div>
-      <p class="muted" style="margin:8px 0 0">Registra unas cuantas sesiones y aquí aparecerá qué ejercicios
-      progresan, cuáles se han parado y cuánto estás entrenando.</p></div>`;
+    return `<div class="card"><div class="kicker">${t('summary')}</div>
+      <p class="muted" style="margin:8px 0 0">${t('summaryEmpty')}</p></div>`;
   }
-  const li = (t) => `<li>${t}</li>`;
+  const li = (x) => `<li>${x}</li>`;
   return `<div class="card">
-    <div class="kicker">Resumen</div>
+    <div class="kicker">${t('summary')}</div>
     <div class="stats">
-      <div><span class="n">${s.recientes}</span><em>sesiones en 4 semanas</em></div>
-      <div><span class="n">${s.subiendo.length}</span><em>ejercicios subiendo</em></div>
-      <div><span class="n ${s.parados.length ? 'warnv' : ''}">${s.parados.length}</span><em>estancados</em></div>
+      <div><span class="n">${s.recientes}</span><em>${t('statSessions')}</em></div>
+      <div><span class="n">${s.subiendo.length}</span><em>${t('statRising')}</em></div>
+      <div><span class="n ${s.parados.length ? 'warnv' : ''}">${s.parados.length}</span><em>${t('statStalled')}</em></div>
     </div>
     <ul class="bullets">
-      ${s.recientes >= 14 ? li('Adherencia muy buena: 3-4 sesiones por semana sostenidas.')
-        : s.recientes >= 8 ? li('Adherencia correcta. Con una sesión más por semana el progreso se nota antes.')
-        : li('<strong>Estás entrenando poco</strong> para el plan: son 4 días por semana. La constancia pesa más que cualquier ajuste de la rutina.')}
-      ${s.subiendo.length ? li(`Mejor progresión: <strong>${esc(s.subiendo[0].ex.name)}</strong> (+${Math.round(s.subiendo[0].pct)} % en las últimas 3 sesiones).`) : ''}
+      ${s.recientes >= 14 ? li(t('adhGood')) : s.recientes >= 8 ? li(t('adhOk')) : li(t('adhBad'))}
+      ${s.subiendo.length ? li(t('bestProgress', esc(exName(s.subiendo[0].ex)), Math.round(s.subiendo[0].pct))) : ''}
       ${s.parados.length >= 3
-        ? li(`<strong>${s.parados.length} ejercicios llevan varias sesiones sin subir.</strong> Si es general, casi siempre es comida o descanso, no el programa.`)
-        : s.parados.length ? li(`Sin avance en: ${s.parados.map((p) => esc(p.ex.name)).join(', ')}. Prueba a bajar 5 % el peso y reconstruir.`) : ''}
-      ${s.peso ? li(`Peso corporal: <strong>${fmt(Math.round(s.peso.actual * 10) / 10)} kg</strong> (${s.peso.delta >= 0 ? '+' : ''}${fmt(Math.round(s.peso.delta * 10) / 10)} kg en 4 semanas).`) : ''}
-      ${s.cintura != null ? li(`Cintura: <strong>${s.cintura <= 0 ? '' : '+'}${fmt(Math.round(s.cintura * 10) / 10)} cm</strong> desde el primer registro.`) : ''}
+        ? li(t('manyStalled', s.parados.length))
+        : s.parados.length ? li(t('someStalled', s.parados.map((p) => esc(exName(p.ex))).join(', '))) : ''}
+      ${s.peso ? li(t('bodyWeightLine', fmt(Math.round(s.peso.actual * 10) / 10), (s.peso.delta >= 0 ? '+' : '') + fmt(Math.round(s.peso.delta * 10) / 10))) : ''}
+      ${s.cintura != null ? li(t('waistLine', (s.cintura <= 0 ? '' : '+') + fmt(Math.round(s.cintura * 10) / 10))) : ''}
     </ul>
-    <p class="muted" style="margin:12px 0 0;font-size:13px">Todo esto sale de tu propio registro. Para revisarlo
-    con calma o compartirlo, en Ajustes puedes descargar el histórico completo en JSON.</p>
+    <p class="muted" style="margin:12px 0 0;font-size:13px">${t('summaryFoot')}</p>
   </div>`;
 }
 
@@ -540,38 +548,38 @@ function viewProgress() {
   })).filter((p) => p.y > 0);
 
   app.innerHTML = `
-    ${header('Progreso', user.name, false)}
+    ${header(t('tabProgress'), user.name, false)}
     ${viewSummary(u)}
     <select class="picker" id="ex-pick">
-      ${USERS[u].days.map((d) => `<optgroup label="${esc(d.name)}">
-        ${d.exercises.map((e) => `<option value="${e.key}" ${e.key === key ? 'selected' : ''}>${esc(e.name)}</option>`).join('')}
+      ${USERS[u].days.map((d) => `<optgroup label="${esc(dayName(d))}">
+        ${d.exercises.map((e) => `<option value="${e.key}" ${e.key === key ? 'selected' : ''}>${esc(exName(e))}</option>`).join('')}
       </optgroup>`).join('')}
     </select>
 
     <div class="card">
-      <div class="kicker">1RM estimado (Epley)</div>
-      <h3>${esc(ex.name)}</h3>
-      <p class="muted" style="margin:4px 0 0">Sube aunque el peso en la barra se quede quieto. Es la métrica honesta en déficit calórico.</p>
+      <div class="kicker">${t('e1rmKicker')}</div>
+      <h3>${esc(exName(ex))}</h3>
+      <p class="muted" style="margin:4px 0 0">${t('e1rmNote')}</p>
       ${chart([{ points }])}
     </div>
 
     ${volume.length > 1 ? `<div class="card">
-      <div class="kicker">Tonelaje por sesión</div>
-      <p class="muted" style="margin:0">Peso × repeticiones sumado en todas las series.</p>
+      <div class="kicker">${t('tonnageKicker')}</div>
+      <p class="muted" style="margin:0">${t('tonnageNote')}</p>
       ${chart([{ points: volume }])}
     </div>` : ''}
 
     <div class="card">
-      <div class="kicker">Historial</div>
-      ${sessions.length === 0 ? '<p class="muted" style="margin:8px 0 0">Todavía no has registrado este ejercicio.</p>' : `
+      <div class="kicker">${t('history')}</div>
+      ${sessions.length === 0 ? `<p class="muted" style="margin:8px 0 0">${t('noHistory')}</p>` : `
       <table class="hist">
-        <thead><tr><th>Fecha</th><th>Series</th><th>Peso</th><th>e1RM</th></tr></thead>
+        <thead><tr><th>${t('colDate')}</th><th>${t('colSets')}</th><th>${t('colWeight')}</th><th>e1RM</th></tr></thead>
         <tbody>${sessions.slice().reverse().slice(0, 12).map((ses) => {
           const d = ses.sets.filter((s) => s.reps > 0);
           const wmax = Math.max(0, ...d.map((s) => s.weight || 0));
           const best = Math.max(0, ...d.map((s) => e1rm(s.weight, s.reps)));
           return `<tr>
-            <td>${new Date(ses.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</td>
+            <td>${new Date(ses.date).toLocaleDateString(locale(), { day: '2-digit', month: 'short' })}</td>
             <td>${d.map((s) => s.reps).join('/') || '—'}</td>
             <td>${wmax ? fmt(wmax) + ' kg' : '—'}</td>
             <td>${best ? fmt(Math.round(best * 10) / 10) : '—'}</td>
@@ -591,32 +599,31 @@ function viewBody() {
   const cPoints = rows.filter((r) => r.waistCm).map((r) => ({ x: Date.parse(r.loggedAt), y: r.waistCm }));
 
   app.innerHTML = `
-    ${header('Peso y cintura', USERS[u].name, true)}
-    <div class="note">Compara <strong>promedios semanales</strong>, nunca días sueltos. La cintura es el mejor
-    indicador: si baja, vas bien aunque la báscula se atasque.</div>
+    ${header(t('bodyTitle'), USERS[u].name, true)}
+    <div class="note">${t('bodyNote')}</div>
 
     <div class="card">
-      <div class="field"><label for="bw">Peso corporal (kg)</label>
+      <div class="field"><label for="bw">${t('fieldWeight')}</label>
         <input id="bw" type="number" inputmode="decimal" step="0.1" placeholder="${rows.at(-1)?.weightKg ?? ''}"></div>
-      <div class="field"><label for="wc">Cintura (cm) — opcional</label>
+      <div class="field"><label for="wc">${t('fieldWaist')}</label>
         <input id="wc" type="number" inputmode="decimal" step="0.5" placeholder="${rows.at(-1)?.waistCm ?? ''}"></div>
-      <button class="btn primary wide" id="save-body">Guardar de hoy</button>
+      <button class="btn primary wide" id="save-body">${t('saveToday')}</button>
     </div>
 
     <div class="card">
-      <div class="kicker">Evolución</div>
+      <div class="kicker">${t('evolution')}</div>
       ${chart([{ points: wPoints }, { points: cPoints }])}
       <div class="legend">
-        <span><i class="swatch" style="background:var(--lime)"></i>Peso (kg)</span>
-        <span><i class="swatch" style="background:var(--fg-var)"></i>Cintura (cm)</span>
+        <span><i class="swatch" style="background:var(--lime)"></i>${t('legendWeight')}</span>
+        <span><i class="swatch" style="background:var(--fg-var)"></i>${t('legendWaist')}</span>
       </div>
     </div>
 
-    ${rows.length ? `<div class="card"><div class="kicker">Registros</div>
+    ${rows.length ? `<div class="card"><div class="kicker">${t('records')}</div>
       <table class="hist">
-        <thead><tr><th>Fecha</th><th>Peso</th><th>Cintura</th></tr></thead>
+        <thead><tr><th>${t('colDate')}</th><th>${t('legendWeight')}</th><th>${t('legendWaist')}</th></tr></thead>
         <tbody>${rows.slice().reverse().slice(0, 14).map((r) => `<tr>
-          <td>${new Date(r.loggedAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</td>
+          <td>${new Date(r.loggedAt).toLocaleDateString(locale(), { day: '2-digit', month: 'short' })}</td>
           <td>${r.weightKg ? fmt(r.weightKg) + ' kg' : '—'}</td>
           <td>${r.waistCm ? fmt(r.waistCm) + ' cm' : '—'}</td>
         </tr>`).join('')}</tbody>
@@ -625,94 +632,88 @@ function viewBody() {
   document.getElementById('save-body').onclick = () => {
     const w = document.getElementById('bw').value;
     const c = document.getElementById('wc').value;
-    if (!w && !c) { toast('Escribe al menos un valor'); return; }
+    if (!w && !c) { toast(t('needOneValue')); return; }
     db.logBody(u, { weightKg: w, waistCm: c });
-    toast('Guardado');
+    toast(t('saved'));
     render();
     sync(true);
   };
   wireTabs('home');
 }
 
-const CATS = [['desayuno', 'Desayunos'], ['comida', 'Comidas'], ['cena', 'Cenas'], ['snack', 'Snacks']];
+const CATS = [['desayuno', 'catBreakfast'], ['comida', 'catLunch'], ['cena', 'catDinner'], ['snack', 'catSnack']];
 
 function viewDiet() {
   const { u, user } = ctx();
-  const t = TARGETS[u];
+  const tg = TARGETS[u];
   const tot = dayTotals(u);
-  const difKcal = Math.round(tot.kcal - t.kcal);
+  const difKcal = Math.round(tot.kcal - tg.kcal);
 
   const mealCard = (m, slot, half) => {
     const abierto = state.meal === m.key;
     const f = half ? 0.5 : 1;
     return `<div class="card meal ${abierto ? 'open' : ''}" data-meal="${m.key}">
       <button class="ex-head" data-openmeal="${m.key}" aria-expanded="${abierto}">
-        <span class="ex-name">${slot ? `<span class="slot">${esc(slot)}</span>` : ''}${esc(m.name)}${half ? ' <em class="muted">(media ración)</em>' : ''}
-          <span class="ex-spec">${Math.round(m.kcal * f)} kcal · ${Math.round(m.prot * f)} g proteína · ${m.min} min · ≈${fmt(Math.round(m.price * f * 100) / 100)} €</span>
+        <span class="ex-name">${slot ? `<span class="slot">${esc(slotName(slot))}</span>` : ''}${esc(mealName(m))}${half ? ` <em class="muted">${t('halfPortion')}</em>` : ''}
+          <span class="ex-spec">${Math.round(m.kcal * f)} kcal · ${Math.round(m.prot * f)} ${t('gProtein')} · ${m.min} ${t('minShort')} · ≈${fmt(Math.round(m.price * f * 100) / 100)} €</span>
         </span>
         <span class="ex-state">${abierto ? '−' : '+'}</span>
       </button>
       ${abierto ? `
         <div class="recipe">
-          <h4>Ingredientes</h4>
-          <ul>${m.ingredients.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
-          <h4>Preparación</h4>
-          <ol>${m.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
-          ${m.tip ? `<p class="tip">${esc(m.tip)}</p>` : ''}
+          <h4>${t('ingredients')}</h4>
+          <ul>${mealIngredients(m).map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
+          <h4>${t('preparation')}</h4>
+          <ol>${mealSteps(m).map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
+          ${m.tip ? `<p class="tip">${esc(mealTip(m))}</p>` : ''}
         </div>` : ''}
     </div>`;
   };
 
   app.innerHTML = `
-    ${header('Dieta', user.name, false)}
+    ${header(t('dietTitle'), user.name, false)}
 
     <div class="week">
-      <div class="lbl">${esc(t.estrategia)}</div>
-      <div class="big">${t.kcal} <span style="font-size:15px">kcal/día</span></div>
+      <div class="lbl">${esc(targetField(u, 'estrategia', tg.estrategia))}</div>
+      <div class="big">${tg.kcal} <span style="font-size:15px">${t('kcalDay')}</span></div>
       <div class="macros">
-        <div><span class="n">${t.prot}</span><em>g proteína</em></div>
-        <div><span class="n">${t.carb}</span><em>g carbos</em></div>
-        <div><span class="n">${t.fat}</span><em>g grasas</em></div>
+        <div><span class="n">${tg.prot}</span><em>${t('gProtein')}</em></div>
+        <div><span class="n">${tg.carb}</span><em>${t('gCarbs')}</em></div>
+        <div><span class="n">${tg.fat}</span><em>${t('gFat')}</em></div>
       </div>
-      <div class="hint">${esc(t.detalle)}</div>
+      <div class="hint">${esc(targetField(u, 'detalle', tg.detalle))}</div>
     </div>
 
-    <div class="note"><strong>Proteína:</strong> ${esc(t.proteinaNota)}</div>
+    <div class="note"><strong>${t('proteinLabel')}</strong> ${esc(targetField(u, 'proteinaNota', tg.proteinaNota))}</div>
 
     <div class="card">
-      <div class="kicker">Día de ejemplo</div>
-      <p class="muted" style="margin:4px 0 0">Suma <strong>${Math.round(tot.kcal)} kcal</strong> y
-      <strong>${Math.round(tot.prot)} g</strong> de proteína, por unos <strong>${fmt(Math.round(tot.price * 100) / 100)} €</strong> al día.
-      ${Math.abs(difKcal) <= 120
-        ? 'Cuadra con tu objetivo.'
-        : `Se queda ${difKcal > 0 ? `${difKcal} kcal por encima` : `${-difKcal} kcal por debajo`}: ajusta con la ración de arroz, pasta o pan.`}</p>
+      <div class="kicker">${t('sampleDay')}</div>
+      <p class="muted" style="margin:4px 0 0">${t('sampleSums', Math.round(tot.kcal), Math.round(tot.prot), fmt(Math.round(tot.price * 100) / 100))}
+      ${Math.abs(difKcal) <= 120 ? t('sampleFits')
+        : difKcal > 0 ? t('sampleOver', difKcal) : t('sampleUnder', -difKcal)}</p>
     </div>
 
     ${SAMPLE_DAY[u].map((it) => mealCard(mealByKey(it.key), it.slot, it.half)).join('')}
 
     <div class="card">
-      <button class="btn wide" id="lista">Ver lista de la compra del día</button>
+      <button class="btn wide" id="lista">${t('shoppingBtn')}</button>
     </div>
 
-    <div class="sec-title">Todas las recetas</div>
+    <div class="sec-title">${t('allRecipes')}</div>
     ${CATS.map(([c, label]) => `
-      <div class="kicker" style="margin:16px 0 8px">${label}</div>
+      <div class="kicker" style="margin:16px 0 8px">${t(label)}</div>
       ${MEALS.filter((m) => m.cat === c).map((m) => mealCard(m, null, false)).join('')}
     `).join('')}
 
-    <div class="note" style="margin-top:16px">
-      Las calorías son estimaciones de tablas estándar y los precios son orientativos: cambian
-      cada temporada. Sirven para acertar el objetivo con un margen del 5-10 %, que es lo que importa.
-    </div>`;
+    <div class="note" style="margin-top:16px">${t('dietDisclaimer')}</div>`;
 
   app.querySelectorAll('[data-openmeal]').forEach((b) => {
     b.onclick = () => { state.meal = state.meal === b.dataset.openmeal ? null : b.dataset.openmeal; render(); };
   });
   document.getElementById('lista').onclick = () => {
     const l = shoppingList(u);
-    toast(`${l.length} productos — mira la ficha de cada receta`);
-    navigator.clipboard?.writeText('Lista de la compra\n\n' + l.map((i) => '- ' + i).join('\n'))
-      .then(() => toast('Lista copiada al portapapeles')).catch(() => {});
+    navigator.clipboard?.writeText(t('shoppingTitle') + '\n\n' + l.map((i) => '- ' + i).join('\n'))
+      .then(() => toast(t('shoppingCopied'))).catch(() => {});
   };
   wireTabs('diet');
 }
@@ -723,63 +724,64 @@ function viewSettings() {
   const last = db.getLastSync();
 
   app.innerHTML = `
-    ${header('Ajustes', user.name, false)}
+    ${header(t('settingsTitle'), user.name, false)}
 
     <div class="card">
-      <div class="kicker">Sincronización</div>
+      <div class="kicker">${t('language')}</div>
+      <div class="btn-row" style="margin-top:8px">
+        ${Object.entries(LANGS).map(([k, n]) =>
+          `<button class="btn ${getLang() === k ? 'primary' : ''}" data-lang="${k}">${n}</button>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="kicker">${t('syncKicker')}</div>
       <div class="sync" style="margin:6px 0 10px">
         <span class="dot ${!db.isConfigured() ? '' : pend ? 'wait' : 'ok'}"></span>
-        ${!db.isConfigured()
-          ? 'Solo local — Supabase sin configurar'
-          : pend ? `${pend} registro(s) pendientes de subir` : 'Todo sincronizado'}
+        ${!db.isConfigured() ? t('syncLocal')
+          : pend ? t('syncPending', pend) : t('syncOk')}
       </div>
-      ${last ? `<p class="muted" style="margin:0 0 10px">Última subida: ${new Date(last).toLocaleString('es-ES')}</p>` : ''}
+      ${last ? `<p class="muted" style="margin:0 0 10px">${t('lastUpload', new Date(last).toLocaleString(locale()))}</p>` : ''}
       <div class="btn-row">
-        <button class="btn" id="do-sync" ${db.isConfigured() ? '' : 'disabled'}>Sincronizar ahora</button>
-        <button class="btn" id="do-pull" ${db.isConfigured() ? '' : 'disabled'}>Recuperar de la nube</button>
-        <button class="btn" id="do-export">Descargar copia</button>
-        <button class="btn" id="do-import">Restaurar copia</button>
+        <button class="btn" id="do-sync" ${db.isConfigured() ? '' : 'disabled'}>${t('btnSync')}</button>
+        <button class="btn" id="do-pull" ${db.isConfigured() ? '' : 'disabled'}>${t('btnPull')}</button>
+        <button class="btn" id="do-export">${t('btnExport')}</button>
+        <button class="btn" id="do-import">${t('btnImport')}</button>
       </div>
       <input type="file" id="file" accept="application/json" hidden>
-      ${!db.isConfigured() ? `<div class="note warn" style="margin:12px 0 0">Sin Supabase configurado los datos viven
-        solo en este móvil. <strong>Safari puede borrarlos si no abres la app en ~7 días.</strong> Descarga una copia de vez en cuando.</div>` : ''}
+      ${!db.isConfigured() ? `<div class="note warn" style="margin:12px 0 0">${t('noCloudWarn')}</div>` : ''}
     </div>
 
     <div class="card">
-      <div class="kicker">Mesociclo</div>
-      <p class="muted" style="margin:4px 0 10px">Semana <strong>${week} de 5</strong> · empezó el
-        ${new Date(start).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-      <div class="field"><label for="meso">Fecha de inicio</label>
+      <div class="kicker">${t('mesoKicker')}</div>
+      <p class="muted" style="margin:4px 0 10px">${t('mesoState', week,
+        new Date(start).toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' }))}</p>
+      <div class="field"><label for="meso">${t('mesoStart')}</label>
         <input id="meso" type="date" value="${start}"></div>
-      <button class="btn wide" id="reset-meso">Empezar un mesociclo nuevo hoy</button>
+      <button class="btn wide" id="reset-meso">${t('mesoReset')}</button>
     </div>
 
     <div class="card">
-      <div class="kicker">Cuenta</div>
-      <button class="btn wide ghost" id="switch">Cambiar de usuario</button>
+      <div class="kicker">${t('account')}</div>
+      <button class="btn wide ghost" id="switch">${t('switchUser')}</button>
     </div>
 
-    <div class="note">
-      <strong>Sobre el temporizador:</strong> la cuenta es correcta aunque bloquees el móvil, pero
-      <strong>no suena solo</strong>. iOS no permite alarmas fiables en segundo plano sin notificaciones push.
-    </div>
+    <div class="note">${t('timerNote')}</div>
 
-    <p class="ver">zgym v${VERSION} · <span id="ver-estado">comprobando…</span></p>`;
+    <p class="ver">zgym v${VERSION} · <span id="ver-estado">${t('verChecking')}</span></p>`;
 
   document.getElementById('do-sync').onclick = async () => {
-    toast('Sincronizando…');
+    toast(t('syncing'));
     const r = await sync(false);
-    toast(r.ok ? (r.sent ? `${r.sent} registro(s) subidos` : 'Nada pendiente') : `Error: ${r.error}`);
+    toast(r.ok ? (r.sent ? t('syncedN', r.sent) : t('nothingPending')) : t('errorPrefix', r.error));
     render();
   };
 
   document.getElementById('do-pull').onclick = async () => {
-    toast('Buscando en la nube…');
+    toast(t('searchingCloud'));
     const r = await db.pullFromCloud(remoteKeys());
-    if (!r.ok) { toast(`Error: ${r.error}`); return; }
-    toast(r.sets || r.body
-      ? `Recuperados ${r.sets} series y ${r.body} pesajes`
-      : 'No había nada nuevo que recuperar');
+    if (!r.ok) { toast(t('errorPrefix', r.error)); return; }
+    toast(r.sets || r.body ? t('recovered', r.sets, r.body) : t('nothingToRecover'));
     render();
   };
 
@@ -799,10 +801,10 @@ function viewSettings() {
     if (!f) return;
     try {
       db.importAll(JSON.parse(await f.text()));
-      toast('Copia restaurada');
+      toast(t('restored'));
       render();
     } catch (err) {
-      toast('Archivo no válido');
+      toast(t('badFile'));
     }
   };
 
@@ -811,12 +813,16 @@ function viewSettings() {
   };
   document.getElementById('reset-meso').onclick = () => {
     db.setMesocycleStart(u, db.todayISO());
-    toast('Mesociclo reiniciado en la semana 1');
+    toast(t('mesoResetDone'));
     render();
   };
   document.getElementById('switch').onclick = () => {
     state.user = null; db.setUser(null); state.view = 'home'; render();
   };
+
+  app.querySelectorAll('[data-lang]').forEach((b) => {
+    b.onclick = () => { setLang(b.dataset.lang); render(); };
+  });
 
   // Estado de la versión, comprobado contra el servidor en el momento
   fetch('./version.json', { cache: 'no-store' })
@@ -824,12 +830,12 @@ function viewSettings() {
     .then((d) => {
       const el = document.getElementById('ver-estado');
       if (!el) return;
-      if (d.version === VERSION) { el.textContent = 'al día'; el.style.color = 'var(--lime)'; }
-      else { el.textContent = `hay la v${d.version} disponible`; el.style.color = 'var(--danger)'; }
+      if (d.version === VERSION) { el.textContent = t('verUpToDate'); el.style.color = 'var(--lime)'; }
+      else { el.textContent = t('verAvailable', d.version); el.style.color = 'var(--danger)'; }
     })
     .catch(() => {
       const el = document.getElementById('ver-estado');
-      if (el) el.textContent = 'sin conexión';
+      if (el) el.textContent = t('verOffline');
     });
 
   wireTabs('settings');
@@ -850,7 +856,7 @@ async function syncBoth(silent) {
   const up = await sync(true);
   const down = await db.pullFromCloud(remoteKeys());
   if (down.ok && (down.sets || down.body) && !silent) {
-    toast(`Recuperados ${down.sets} registros de la nube`);
+    toast(t('recoveredFromCloud', down.sets));
     render();
   }
   return { up, down };
@@ -882,8 +888,8 @@ async function checkVersion() {
     const remota = (await res.json()).version;
     if (!remota || remota === VERSION) return;
     const bar = document.getElementById('update');
-    bar.querySelector('.upd-txt').innerHTML =
-      `Hay una versión nueva <strong>(v${esc(remota)})</strong>. Tienes la v${VERSION}.`;
+    bar.querySelector('.upd-txt').innerHTML = t('updateNew', esc(remota), VERSION);
+    document.getElementById('upd-go').textContent = t('updateBtn');
     bar.hidden = false;
   } catch {
     /* sin conexión: se comprueba en la próxima apertura */
@@ -892,7 +898,7 @@ async function checkVersion() {
 
 document.getElementById('upd-go').onclick = async () => {
   const btn = document.getElementById('upd-go');
-  btn.textContent = 'Actualizando…';
+  btn.textContent = t('updating');
   btn.disabled = true;
   try {
     for (const k of await caches.keys()) await caches.delete(k);
@@ -904,7 +910,7 @@ document.getElementById('upd-go').onclick = async () => {
 document.getElementById('upd-x').onclick = () => { document.getElementById('update').hidden = true; };
 
 document.addEventListener('gym:storage-error', () =>
-  toast('No se pudo guardar. ¿Navegación privada o memoria llena?'));
+  toast(t('storageError')));
 addEventListener('online', () => syncBoth(false));
 
 render();
