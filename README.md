@@ -145,6 +145,51 @@ grant usage, select on all sequences in schema public to anon;
    ```
 5. `git commit` y `git push`. En **Ajustes** de la app aparecerá el estado de sincronización.
 
+## Crecer a 3-4 personas: añadir login
+
+El modelo actual (clave `anon`, `user_key` no adivinable) vale para dos personas que se conocen.
+Con más gente cada uno querrá que sus datos sean suyos, y eso exige autenticación real.
+La migración es **aditiva**: no se pierde ni un registro.
+
+1. **Activar Supabase Auth** con *magic link* por email (sin contraseñas que recordar).
+   Authentication → Providers → Email → *Enable*.
+2. **Añadir la columna de propietario** y rellenarla con los usuarios actuales:
+   ```sql
+   alter table sets_log add column owner uuid references auth.users(id);
+   alter table body_log add column owner uuid references auth.users(id);
+   -- backfill: mapear cada user_key al uid del usuario ya registrado
+   update sets_log set owner = 'UID-DE-ANNA'  where user_key = 'anna_7f3c91';
+   update sets_log set owner = 'UID-DE-DAVID' where user_key = 'david_2b8e46';
+   ```
+3. **Cambiar las políticas** para que cada uno vea solo lo suyo:
+   ```sql
+   drop policy "anon sel sets" on sets_log;   -- y las demás de anon
+   create policy "propios sets" on sets_log
+     for all to authenticated
+     using (owner = auth.uid()) with check (owner = auth.uid());
+   ```
+4. **En la app**: una pantalla de login que pide el email y llama a
+   `POST /auth/v1/otp`. El token de sesión sustituye a la clave `anon` en la cabecera
+   `Authorization`. El selector Anna/David desaparece: el usuario sale de la sesión.
+
+Trabajo estimado: una pantalla nueva y unas 80-100 líneas en `store.js`. El resto de la app
+no se entera, porque `user_key` ya está aislado en `routines.js`.
+
+**Acceso de administrador:** David es el dueño del proyecto de Supabase, así que ya tiene acceso
+total a la base de datos desde el panel — eso no depende de las políticas RLS, que solo gobiernan
+lo que la app puede leer y escribir. Si además quiere ver los datos de todos *dentro de la app*,
+se añade una política extra con su uid.
+
+## Límites del plan gratuito
+
+- **Espacio: 500 MB.** Una serie registrada ocupa unos 220 bytes con índices. Cuatro personas
+  entrenando 4 días por semana generan ~5 MB al año: el espacio no será nunca el problema.
+- **Pausa por inactividad:** un proyecto gratuito se pausa tras **7 días sin actividad**. Con
+  entrenamientos regulares no ocurre; tras unas vacaciones largas hay que reactivarlo con un clic
+  desde el panel. No se pierden datos.
+- GitHub Pages solo sirve archivos estáticos: **no tiene base de datos**. Aloja la app; los datos
+  viven en Supabase.
+
 ## Lo que hay que saber
 
 **El repo es público y la clave `anon` va en el cliente.** No hay forma de esconderla en un sitio
