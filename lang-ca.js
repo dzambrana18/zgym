@@ -218,12 +218,12 @@ export const CA = {
     // --- Anna, Tors A
     'a-jalon-prono': { name: 'Jaló al pit, presa prona ampla', cue: 'Pit alt, estira amb els colzes cap a les costelles. Sense balanceig.' },
     'a-press-banca-mancuernas': { name: 'Press banca pla amb manuelles', cue: 'Manteniment de pectoral. Recorregut complet, sense buscar rècords.' },
-    'a-remo-polea-neutro': { name: 'Rem assegut a la politja, presa neutra', cue: 'Pausa d’1 s en contracció, escàpules enrere i avall.' },
     'a-press-militar-mancuernas': { name: 'Press militar asseguda amb manuelles', cue: 'Respatller a 80-85°, costelles avall per no arquejar la lumbar.' },
-    'a-laterales': { name: 'Elevacions laterals', cue: 'Puja fins a l’horitzontal, baixa en 2-3 s. Zero impuls de maluc.' },
-    'a-face-pull': { name: 'Face pull a la politja alta', cue: 'Supersèrie amb l’anterior. Colzes alts, rotació externa al final. Clau per a la teva espatlla.' },
+    'a-laterales': { name: "Elevacions laterals amb manuelles", cue: "Puja fins a l’horitzontal, baixa en 2-3 s. Zero impuls de maluc. Amb manuella el més dur és a dalt; a la politja de dijous és a baix. Per això hi són les dues: l’espatlla necessita dos estímuls per setmana i així no es repeteix la sensació." },
+    'a-face-pull': { name: "Face pull a la politja alta", cue: "Supersèrie amb l’anterior. Colzes alts i rotació externa al final: això és espatlla posterior més rotadors, no l’obertura pura de dijous. És el que compensa les hores d’espatlla avançada." },
     'a-curl-inclinado': { name: 'Curl bíceps al banc inclinat', cue: 'Braç per darrere del tronc, estirament complet a baix.' },
-    'a-triceps-cuerda': { name: 'Extensió de tríceps a la politja amb corda', cue: 'Supersèrie amb el curl. Colzes enganxats al costat.' },
+    'a-remo-mancuerna': { name: "Rem amb manuella a una mà", cue: "Una mà i un genoll al banc. 10-12 per braç. Fes-ho amb manuella encara que tinguis la màquina al costat: el rem assegut ja el tens dijous, i a una mà treballes cada costat per separat i el core aguantant la rotació." },
+    'a-press-frances': { name: "Press francès amb manuelles", cue: "Supersèrie amb el curl. Estirada al banc, baixes les manuelles cap al front amb els colzes quiets. És un patró diferent del de la politja de dijous: aquí el tríceps treballa estirat, que és on més creix." },
     'a-plancha': { name: 'Planxa frontal', cue: 'Gluti estret, pelvis en retroversió. Qualitat per sobre de durada.' },
     // --- Anna, Cama A
     'a-sentadilla': { name: 'Sentadilla darrere amb barra', cue: 'Setmana 1: barra buida (20 kg) fins que el patró surti sol. Profunditat fins a paral·lel o una mica més.' },

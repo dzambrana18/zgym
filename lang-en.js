@@ -218,12 +218,12 @@ export const EN = {
     // --- Anna, Upper A
     'a-jalon-prono': { name: 'Lat pulldown, wide overhand grip', cue: 'Chest tall, pull with your elbows towards your ribs. No swinging.' },
     'a-press-banca-mancuernas': { name: 'Flat dumbbell bench press', cue: 'Chest maintenance. Full range, no need to chase records.' },
-    'a-remo-polea-neutro': { name: 'Seated cable row, neutral grip', cue: '1 s pause at the contraction, shoulder blades back and down.' },
     'a-press-militar-mancuernas': { name: 'Seated dumbbell shoulder press', cue: 'Backrest at 80-85°, ribs down so you do not arch your lower back.' },
-    'a-laterales': { name: 'Lateral raises', cue: 'Up to horizontal, down over 2-3 s. Zero hip drive.' },
-    'a-face-pull': { name: 'High cable face pull', cue: 'Superset with the previous one. Elbows high, external rotation at the end. Key for your shoulder.' },
+    'a-laterales': { name: "Dumbbell lateral raises", cue: "Up to horizontal, down over 2-3 s. Zero hip drive. With a dumbbell the hardest part is at the top; on Thursday’s cable it is at the bottom. That is why both are there: the shoulder needs two stimuli a week and this way it does not feel repetitive." },
+    'a-face-pull': { name: "High cable face pull", cue: "Superset with the previous one. Elbows high and external rotation at the end: this is rear delt plus rotators, not Thursday’s pure fly. It is what offsets the hours of forward shoulder." },
     'a-curl-inclinado': { name: 'Incline bench biceps curl', cue: 'Arm behind the torso, full stretch at the bottom.' },
-    'a-triceps-cuerda': { name: 'Rope triceps pushdown', cue: 'Superset with the curl. Elbows pinned to your sides.' },
+    'a-remo-mancuerna': { name: "Single-arm dumbbell row", cue: "One hand and one knee on the bench. 10-12 per arm. Use a dumbbell even with the machine right there: the seated row is already on Thursday, and one-armed you work each side separately plus the core resisting rotation." },
+    'a-press-frances': { name: "Dumbbell skull crusher", cue: "Superset with the curl. Lying on the bench, lower the dumbbells towards your forehead with the elbows still. Different pattern from Thursday’s cable work: here the triceps works stretched, which is where it grows most." },
     'a-plancha': { name: 'Front plank', cue: 'Glutes squeezed, pelvis tucked. Quality over duration.' },
     // --- Anna, Legs A
     'a-sentadilla': { name: 'Back squat', cue: 'Week 1: empty bar (20 kg) until the pattern is automatic. Depth to parallel or slightly below.' },
