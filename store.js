@@ -1,0 +1,221 @@
+// Almacenamiento local-first.
+// localStorage es la FUENTE DE VERDAD: toda escritura entra ahí al instante, así que la app
+// funciona igual en un sótano sin cobertura. Cada registro se encola además en 'pendingSync',
+// que se vacía contra Supabase al abrir la app y en el evento 'online'.
+
+// ---------------------------------------------------------------------------
+// CONFIGURACIÓN DE SUPABASE — rellenar tras crear el proyecto (ver README.md).
+// Si se dejan vacíos, la app funciona igual pero solo en local (sin copia en la nube).
+// ---------------------------------------------------------------------------
+export const SUPABASE_URL = '';
+export const SUPABASE_ANON_KEY = '';
+
+const K = {
+  user: 'gym.user',
+  sets: (u) => `gym.${u}.sets`,
+  body: (u) => `gym.${u}.body`,
+  meso: (u) => `gym.${u}.mesocycleStart`,
+  queue: 'gym.pendingSync',
+  lastSync: 'gym.lastSync',
+};
+
+function read(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw == null ? fallback : JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+function write(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (err) {
+    // Cuota llena o modo privado de Safari. Avisamos en vez de perder el dato en silencio.
+    console.error('No se pudo guardar en localStorage', err);
+    document.dispatchEvent(new CustomEvent('gym:storage-error'));
+    return false;
+  }
+}
+
+export function todayISO(d = new Date()) {
+  // Fecha local, no UTC: entrenar a las 22:00 no debe contar como el día siguiente.
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+function uuid() {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+// --- usuario ---------------------------------------------------------------
+export const getUser = () => read(K.user, null);
+export const setUser = (u) => write(K.user, u);
+
+// --- mesociclo -------------------------------------------------------------
+export function getMesocycleStart(u) {
+  let s = read(K.meso(u), null);
+  if (!s) {
+    s = todayISO();
+    write(K.meso(u), s);
+  }
+  return s;
+}
+export const setMesocycleStart = (u, iso) => write(K.meso(u), iso);
+
+// --- series ----------------------------------------------------------------
+export const getSets = (u) => read(K.sets(u), []);
+
+export function getSetsFor(u, exerciseKey) {
+  return getSets(u).filter((s) => s.exerciseKey === exerciseKey);
+}
+
+/** Guarda (o sobrescribe) una serie concreta de la sesión de hoy. */
+export function logSet(u, { dayKey, exerciseKey, setIndex, weight, reps, rir, loggedAt }) {
+  const date = loggedAt || todayISO();
+  const all = getSets(u);
+  const i = all.findIndex(
+    (s) => s.loggedAt === date && s.exerciseKey === exerciseKey && s.setIndex === setIndex
+  );
+  const record = {
+    clientId: i >= 0 ? all[i].clientId : uuid(),
+    loggedAt: date,
+    dayKey,
+    exerciseKey,
+    setIndex,
+    weight: weight === '' || weight == null ? null : Number(weight),
+    reps: reps === '' || reps == null ? null : Number(reps),
+    rir: rir === '' || rir == null ? null : Number(rir),
+  };
+  if (i >= 0) all[i] = record;
+  else all.push(record);
+  write(K.sets(u), all);
+  enqueue('sets_log', u, record);
+  return record;
+}
+
+export function deleteSet(u, { exerciseKey, setIndex, loggedAt }) {
+  const date = loggedAt || todayISO();
+  const all = getSets(u).filter(
+    (s) => !(s.loggedAt === date && s.exerciseKey === exerciseKey && s.setIndex === setIndex)
+  );
+  write(K.sets(u), all);
+}
+
+// --- peso corporal y cintura ----------------------------------------------
+export const getBody = (u) =>
+  read(K.body(u), []).slice().sort((a, b) => (a.loggedAt < b.loggedAt ? -1 : 1));
+
+export function logBody(u, { weightKg, waistCm, loggedAt }) {
+  const date = loggedAt || todayISO();
+  const all = read(K.body(u), []);
+  const i = all.findIndex((b) => b.loggedAt === date);
+  const record = {
+    clientId: i >= 0 ? all[i].clientId : uuid(),
+    loggedAt: date,
+    weightKg: weightKg === '' || weightKg == null ? null : Number(weightKg),
+    waistCm: waistCm === '' || waistCm == null ? null : Number(waistCm),
+  };
+  if (i >= 0) all[i] = record;
+  else all.push(record);
+  write(K.body(u), all);
+  enqueue('body_log', u, record);
+  return record;
+}
+
+// --- cola de sincronización ------------------------------------------------
+function enqueue(table, userKey, record) {
+  const q = read(K.queue, []);
+  // Una entrada por (tabla, clientId): reeditar una serie no crea una segunda pendiente.
+  const i = q.findIndex((e) => e.table === table && e.record.clientId === record.clientId);
+  const entry = { table, userKey, record };
+  if (i >= 0) q[i] = entry;
+  else q.push(entry);
+  write(K.queue, q);
+}
+
+export const pendingCount = () => read(K.queue, []).length;
+export const getLastSync = () => read(K.lastSync, null);
+export const isConfigured = () => Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+
+function toRow(table, userKey, r, remoteKey) {
+  const base = { user_key: remoteKey, logged_at: r.loggedAt, client_id: r.clientId };
+  return table === 'sets_log'
+    ? { ...base, day_key: r.dayKey, exercise_key: r.exerciseKey, set_index: r.setIndex, weight: r.weight, reps: r.reps, rir: r.rir }
+    : { ...base, weight_kg: r.weightKg, waist_cm: r.waistCm };
+}
+
+/**
+ * Vacía la cola contra Supabase. Idempotente: el upsert va por client_id, así que
+ * reenviar la misma entrada nunca duplica filas.
+ * Devuelve {ok, sent, error}.
+ */
+export async function syncNow(remoteKeys) {
+  if (!isConfigured()) return { ok: false, sent: 0, error: 'sin-configurar' };
+  if (!navigator.onLine) return { ok: false, sent: 0, error: 'sin-conexion' };
+
+  const queue = read(K.queue, []);
+  if (queue.length === 0) {
+    write(K.lastSync, new Date().toISOString());
+    return { ok: true, sent: 0 };
+  }
+
+  // Agrupamos por tabla para hacer una sola petición por tabla.
+  const byTable = new Map();
+  for (const e of queue) {
+    const remote = remoteKeys[e.userKey];
+    if (!remote) continue;
+    if (!byTable.has(e.table)) byTable.set(e.table, []);
+    byTable.get(e.table).push(toRow(e.table, e.userKey, e.record, remote));
+  }
+
+  const done = [];
+  try {
+    for (const [table, rows] of byTable) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=client_id`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Prefer: 'resolution=merge-duplicates,return=minimal',
+        },
+        body: JSON.stringify(rows),
+      });
+      if (!res.ok) throw new Error(`${table}: HTTP ${res.status} ${await res.text()}`);
+      done.push(table);
+    }
+  } catch (err) {
+    // Solo quitamos de la cola lo que sí se confirmó. El resto se reintenta.
+    write(K.queue, queue.filter((e) => !done.includes(e.table)));
+    return { ok: false, sent: 0, error: String(err.message || err) };
+  }
+
+  write(K.queue, []);
+  write(K.lastSync, new Date().toISOString());
+  return { ok: true, sent: queue.length };
+}
+
+// --- copia de seguridad manual --------------------------------------------
+export function exportAll() {
+  const users = ['anna', 'david'];
+  return {
+    exportedAt: new Date().toISOString(),
+    version: 1,
+    data: Object.fromEntries(
+      users.map((u) => [u, { sets: getSets(u), body: read(K.body(u), []), mesocycleStart: read(K.meso(u), null) }])
+    ),
+  };
+}
+
+export function importAll(payload) {
+  if (!payload?.data) throw new Error('Archivo no reconocido');
+  for (const [u, d] of Object.entries(payload.data)) {
+    if (Array.isArray(d.sets)) write(K.sets(u), d.sets);
+    if (Array.isArray(d.body)) write(K.body(u), d.body);
+    if (d.mesocycleStart) write(K.meso(u), d.mesocycleStart);
+  }
+}

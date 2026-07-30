@@ -1,0 +1,156 @@
+// Comprobación de la lógica de progresión.  Ejecutar:  node progression.test.mjs
+import assert from 'node:assert/strict';
+import {
+  mesocycleWeek, isDeload, targetRir, effectiveSets, e1rm, groupSessions, suggest,
+} from './progression.js';
+import { USERS, allExercises } from './routines.js';
+import { MOVES, moveSvg } from './moves.js';
+
+const banca = { key: 'x', sets: 4, repMin: 6, repMax: 8, rir: 2, startLoad: 77.5, unit: 'kg', increment: 2.5 };
+const set = (setIndex, weight, reps, rir, loggedAt = '2026-07-20') => ({ setIndex, weight, reps, rir, loggedAt });
+
+// --- semana del mesociclo -------------------------------------------------
+assert.equal(mesocycleWeek('2026-07-01', '2026-07-01'), 1, 'día 0 → semana 1');
+assert.equal(mesocycleWeek('2026-07-01', '2026-07-07'), 1, 'día 6 → semana 1');
+assert.equal(mesocycleWeek('2026-07-01', '2026-07-08'), 2, 'día 7 → semana 2');
+assert.equal(mesocycleWeek('2026-07-01', '2026-08-04'), 5, 'día 34 → semana 5');
+assert.equal(mesocycleWeek('2026-07-01', '2026-08-05'), 1, 'día 35 → vuelve a semana 1');
+assert.equal(mesocycleWeek('2026-07-01', '2026-06-20'), 1, 'fecha anterior al inicio → semana 1');
+assert.equal(mesocycleWeek('basura', '2026-07-01'), 1, 'fecha inválida → semana 1');
+assert.ok(isDeload(5) && !isDeload(4));
+
+// --- RIR objetivo por semana ---------------------------------------------
+assert.equal(targetRir(banca, 1), 3);
+assert.equal(targetRir(banca, 3), 2);
+assert.equal(targetRir(banca, 4), 1.5);
+assert.equal(targetRir(banca, 5), 4, 'la descarga sube el RIR a 4');
+// Nunca por debajo de 1: el plan no entrena al fallo.
+assert.equal(targetRir({ ...banca, rir: 1 }, 4), 1, 'clamp inferior en 1');
+assert.equal(targetRir({ ...banca, rir: 4 }, 5), 5, 'clamp superior en 5');
+
+// --- series efectivas ----------------------------------------------------
+assert.equal(effectiveSets(banca, 2, true), 4);
+assert.equal(effectiveSets(banca, 3, true), 5, 'semana 3 suma 1 serie al primer ejercicio');
+assert.equal(effectiveSets(banca, 3, false), 4, '...pero solo al primero');
+assert.equal(effectiveSets(banca, 5, true), 2, 'descarga: mitad de series');
+assert.equal(effectiveSets({ ...banca, sets: 3 }, 5, false), 1, 'descarga de 3 series → 1');
+assert.equal(effectiveSets({ ...banca, sets: 2 }, 5, false), 1, 'nunca 0 series');
+
+// --- e1RM ----------------------------------------------------------------
+assert.equal(Math.round(e1rm(77.5, 8)), 98, '77,5 × 8 ≈ 98 kg de 1RM');
+assert.equal(e1rm(0, 8), 0);
+assert.equal(e1rm(80, 0), 0);
+
+// --- agrupación por sesión, más reciente primero -------------------------
+const g = groupSessions([
+  set(1, 70, 8, 2, '2026-07-10'), set(0, 70, 8, 2, '2026-07-10'), set(0, 75, 6, 2, '2026-07-17'),
+]);
+assert.equal(g.length, 2);
+assert.equal(g[0].date, '2026-07-17', 'la sesión más reciente va primera');
+assert.deepEqual(g[0].sets.map((s) => s.setIndex), [0]);
+assert.deepEqual(g[1].sets.map((s) => s.setIndex), [0, 1], 'las series se ordenan por índice');
+
+// --- sugerencia de carga -------------------------------------------------
+assert.deepEqual(
+  (({ weight, action }) => ({ weight, action }))(suggest(banca, [], 3)),
+  { weight: 77.5, action: 'start' },
+  'sin histórico usa la carga inicial'
+);
+
+// Tope del rango en TODAS las series y con reserva → sube el incremento
+let s = suggest(banca, [set(0, 77.5, 8, 2), set(1, 77.5, 8, 2), set(2, 77.5, 8, 2), set(3, 77.5, 8, 2)], 3);
+assert.equal(s.action, 'up');
+assert.equal(s.weight, 80, '77,5 + 2,5 = 80');
+assert.match(s.last, /8\/8\/8\/8/);
+
+// Una sola serie por debajo del tope → mantiene
+s = suggest(banca, [set(0, 77.5, 8, 2), set(1, 77.5, 8, 2), set(2, 77.5, 8, 2), set(3, 77.5, 7, 2)], 3);
+assert.equal(s.action, 'hold');
+assert.equal(s.weight, 77.5);
+
+// Llega al tope pero sin reserva (RIR 0 < objetivo 2) → consolida
+s = suggest(banca, [set(0, 77.5, 8, 0), set(1, 77.5, 8, 0)], 3);
+assert.equal(s.action, 'hold');
+
+// Sin RIR anotado no se bloquea la progresión
+s = suggest(banca, [set(0, 77.5, 8, null), set(1, 77.5, 8, null)], 3);
+assert.equal(s.action, 'up');
+
+// El mismo histórico en semana de descarga NO sube el peso
+s = suggest(banca, [set(0, 77.5, 8, 2), set(1, 77.5, 8, 2), set(2, 77.5, 8, 2), set(3, 77.5, 8, 2)], 5);
+assert.equal(s.action, 'deload');
+assert.equal(s.weight, 77.5);
+
+// Sin margen (RIR 1 < base 2) se consolida el peso, en cualquier semana
+assert.equal(suggest(banca, [set(0, 77.5, 8, 1), set(1, 77.5, 8, 1)], 4).action, 'hold');
+
+// La semana 1 pide RIR 3 (más suave a propósito). Quien llega al tope con RIR 2 ha apretado MÁS
+// de lo pedido: la subida NO debe bloquearse. La puerta va contra el RIR base, no el de la semana.
+for (const week of [1, 2, 3, 4]) {
+  const r = suggest(banca, [set(0, 77.5, 8, 2), set(1, 77.5, 8, 2), set(2, 77.5, 8, 2), set(3, 77.5, 8, 2)], week);
+  assert.equal(r.action, 'up', `semana ${week}: tope + margen debe subir el peso`);
+  assert.equal(r.weight, 80, `semana ${week}: 77,5 → 80`);
+}
+assert.ok(targetRir(banca, 1) > targetRir(banca, 4), 'el RIR de la semana sigue siendo guía visible');
+
+// Máquina de asistencia: progresar es BAJAR kilos
+const asistida = { ...banca, increment: -2.5, assist: true, startLoad: 31, repMax: 10 };
+s = suggest(asistida, [set(0, 31, 10, 2), set(1, 31, 10, 2)], 3);
+assert.equal(s.weight, 28.5, 'la asistencia baja de 31 a 28,5');
+assert.match(s.reason, /baja la asistencia/);
+
+// Peso corporal: no hay kilos que subir, se sugiere lastre
+const dominadas = { ...banca, unit: 'peso-corporal', increment: null, startLoad: 0, repMax: 8, rir: 1 };
+s = suggest(dominadas, [set(0, 0, 8, 1), set(1, 0, 8, 1)], 3);
+assert.equal(s.action, 'load');
+assert.match(s.reason, /lastre/);
+assert.ok(!s.last.includes('kg'), 'en peso corporal no se muestran kilos');
+
+// Series anotadas a 0 reps (saltadas) no cuentan como tope alcanzado
+s = suggest(banca, [set(0, 77.5, 8, 2), set(1, 0, 0, null)], 3);
+assert.equal(s.action, 'up', 'las series vacías se ignoran');
+
+// --- integridad de los datos de rutina -----------------------------------
+for (const [uk, user] of Object.entries(USERS)) {
+  assert.equal(user.weekLabels.length, 5, `${uk}: 5 etiquetas de semana`);
+  assert.equal(user.days.length, 4, `${uk}: 4 días`);
+  const keys = new Set();
+  for (const ex of allExercises(uk)) {
+    assert.ok(!keys.has(ex.key), `${uk}: clave duplicada ${ex.key}`);
+    keys.add(ex.key);
+    assert.ok(ex.name && ex.cue && ex.video, `${uk}/${ex.key}: falta texto`);
+    assert.ok(ex.sets > 0 && ex.repMin > 0 && ex.repMax >= ex.repMin, `${uk}/${ex.key}: rango de reps inválido`);
+    assert.ok(['kg', 'kg-por-mano', 'peso-corporal'].includes(ex.unit), `${uk}/${ex.key}: unidad ${ex.unit}`);
+    assert.ok(ex.rir >= 1 && ex.rir <= 4, `${uk}/${ex.key}: rir ${ex.rir}`);
+    assert.ok(ex.restSec >= 30, `${uk}/${ex.key}: descanso ${ex.restSec}`);
+    if (ex.unit === 'peso-corporal') assert.equal(ex.increment, null, `${uk}/${ex.key}: peso corporal sin incremento`);
+    else assert.ok(ex.increment !== 0 && ex.increment != null, `${uk}/${ex.key}: falta incremento`);
+    // Todo ejercicio necesita su animación de técnica
+    assert.ok(MOVES[ex.pattern], `${uk}/${ex.key}: patrón inexistente (${ex.pattern})`);
+    assert.match(moveSvg(ex.pattern), /^<svg/, `${uk}/${ex.key}: la animación no genera SVG`);
+    // Toda sugerencia inicial debe ser calculable en las 5 semanas
+    for (let w = 1; w <= 5; w++) assert.ok(suggest(ex, [], w).weight >= 0);
+  }
+  // Cada día debe cerrar con un ejercicio de core
+  const CORE = new Set(['plancha', 'plancha-lateral', 'dead-bug', 'crunch', 'rueda-abdominal']);
+  for (const d of user.days) {
+    assert.ok(CORE.has(d.exercises.at(-1).pattern), `${uk}/${d.key}: el último ejercicio no es de core`);
+  }
+}
+assert.equal(allExercises('anna').length, 33, 'Anna: 33 ejercicios');
+assert.equal(allExercises('david').length, 32, 'David: 32 ejercicios');
+
+// Material que el gimnasio no tiene: no debe quedar ni rastro
+const todos = [...allExercises('anna'), ...allExercises('david')];
+for (const ex of todos) {
+  const t = `${ex.name} ${ex.cue} ${ex.video}`.toLowerCase();
+  assert.ok(!/pec[- +]?deck/.test(t), `${ex.key}: sigue mencionando el pec-deck`);
+  assert.ok(!t.includes('colgado'), `${ex.key}: sigue habiendo elevación de piernas colgado`);
+  assert.ok(!t.includes('femoral sentad'), `${ex.key}: curl femoral sentado, tiene que ser tumbado`);
+  assert.ok(!/sobre la cabeza|por encima de la cabeza/.test(t), `${ex.key}: tríceps desde abajo`);
+}
+// No hay patrones dibujados que nadie use
+const usados = new Set(todos.map((e) => e.pattern));
+assert.deepEqual(Object.keys(MOVES).filter((k) => !usados.has(k)), [], 'patrones de animación sin usar');
+
+console.log('OK — todas las comprobaciones pasan');

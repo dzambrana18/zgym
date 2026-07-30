@@ -1,0 +1,16 @@
+# El repositorio es PÚBLICO (requisito de GitHub Pages en cuenta gratuita).
+# Todo lo que esté aquí se queda solo en tu ordenador.
+
+# Los PDFs de planificación llevan datos personales: edad, peso, % de grasa,
+# cintura y el diagnóstico de cada uno. La app NO los necesita para funcionar.
+Anna.pdf
+David.pdf
+
+# Material de diseño de origen, no hace falta para servir la app
+stitch_iron_flow_fitness.zip
+
+# Basura del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+node_modules/
