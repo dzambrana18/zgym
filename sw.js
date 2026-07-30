@@ -40,6 +40,9 @@ self.addEventListener('fetch', (e) => {
   if (request.method !== 'GET') return;
   // Las peticiones a Supabase nunca se cachean: las gestiona la cola de store.js.
   if (!request.url.startsWith(self.location.origin)) return;
+  // version.json siempre a red y sin guardar: es el testigo que delata una copia vieja.
+  // Si se cacheara, la app compararía su versión contra su propia caché y nunca detectaría nada.
+  if (new URL(request.url).pathname.endsWith('/version.json')) return;
 
   // Network-first con caída a caché: así un push nuevo se ve al recargar con datos,
   // pero la app sigue abriendo sin conexión.

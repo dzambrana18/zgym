@@ -153,4 +153,23 @@ for (const ex of todos) {
 const usados = new Set(todos.map((e) => e.pattern));
 assert.deepEqual(Object.keys(MOVES).filter((k) => !usados.has(k)), [], 'patrones de animación sin usar');
 
+// --- versión ---------------------------------------------------------------
+// La constante de app.js y version.json TIENEN que ir a la par: si se desincronizan,
+// la app avisaría de una actualización que no existe (o peor, no avisaría de la que sí).
+{
+  const fs = await import('node:fs');
+  const enApp = /export const VERSION = '([^']+)'/.exec(fs.readFileSync('app.js', 'utf8'))?.[1];
+  const json = JSON.parse(fs.readFileSync('version.json', 'utf8'));
+  assert.ok(enApp, 'no se encuentra la constante VERSION en app.js');
+  assert.match(enApp, /^\d+\.\d+\.\d+$/, `formato de versión raro: ${enApp}`);
+  assert.equal(json.version, enApp, `version.json (${json.version}) != app.js (${enApp})`);
+  assert.match(json.date, /^\d{4}-\d{2}-\d{2}$/, 'falta la fecha de la versión');
+  // version.json no puede estar en la caché del service worker o la comprobación no sirve
+  const sw = fs.readFileSync('sw.js', 'utf8');
+  assert.ok(!/'\.\/version\.json'/.test(sw.split('self.addEventListener')[0]),
+    'version.json no debe estar en el SHELL cacheado');
+  assert.ok(sw.includes("endsWith('/version.json')"), 'el sw debe excluir version.json de la caché');
+  console.log(`   versión ${enApp} (${json.date})`);
+}
+
 console.log('OK — todas las comprobaciones pasan');

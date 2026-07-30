@@ -6,6 +6,11 @@ import {
   mesocycleWeek, isDeload, targetRir, effectiveSets, e1rm, groupSessions, suggest, fmt,
 } from './progression.js';
 
+// Versión de esta copia de la app. Va emparejada con version.json, que se sirve
+// SIEMPRE desde la red: si no coinciden es que el móvil tiene una copia vieja
+// cacheada. progression.test.mjs comprueba que las dos no se desincronicen.
+export const VERSION = '1.0.0';
+
 const app = document.getElementById('app');
 const state = { user: db.getUser(), view: 'home', dayKey: null, open: null, exKey: null, meal: null, override: {}, draft: {} };
 
@@ -757,7 +762,9 @@ function viewSettings() {
     <div class="note">
       <strong>Sobre el temporizador:</strong> la cuenta es correcta aunque bloquees el móvil, pero
       <strong>no suena solo</strong>. iOS no permite alarmas fiables en segundo plano sin notificaciones push.
-    </div>`;
+    </div>
+
+    <p class="ver">zgym v${VERSION} · <span id="ver-estado">comprobando…</span></p>`;
 
   document.getElementById('do-sync').onclick = async () => {
     toast('Sincronizando…');
@@ -810,6 +817,21 @@ function viewSettings() {
   document.getElementById('switch').onclick = () => {
     state.user = null; db.setUser(null); state.view = 'home'; render();
   };
+
+  // Estado de la versión, comprobado contra el servidor en el momento
+  fetch('./version.json', { cache: 'no-store' })
+    .then((r) => r.json())
+    .then((d) => {
+      const el = document.getElementById('ver-estado');
+      if (!el) return;
+      if (d.version === VERSION) { el.textContent = 'al día'; el.style.color = 'var(--lime)'; }
+      else { el.textContent = `hay la v${d.version} disponible`; el.style.color = 'var(--danger)'; }
+    })
+    .catch(() => {
+      const el = document.getElementById('ver-estado');
+      if (el) el.textContent = 'sin conexión';
+    });
+
   wireTabs('settings');
 }
 
@@ -849,9 +871,42 @@ function render() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Control de versión. La app pregunta al servidor qué versión hay publicada; si no
+// coincide con la suya, este móvil está usando una copia cacheada y hay que refrescarla.
+// ---------------------------------------------------------------------------
+async function checkVersion() {
+  try {
+    const res = await fetch('./version.json', { cache: 'no-store' });
+    if (!res.ok) return;
+    const remota = (await res.json()).version;
+    if (!remota || remota === VERSION) return;
+    const bar = document.getElementById('update');
+    bar.querySelector('.upd-txt').innerHTML =
+      `Hay una versión nueva <strong>(v${esc(remota)})</strong>. Tienes la v${VERSION}.`;
+    bar.hidden = false;
+  } catch {
+    /* sin conexión: se comprueba en la próxima apertura */
+  }
+}
+
+document.getElementById('upd-go').onclick = async () => {
+  const btn = document.getElementById('upd-go');
+  btn.textContent = 'Actualizando…';
+  btn.disabled = true;
+  try {
+    for (const k of await caches.keys()) await caches.delete(k);
+    const regs = await navigator.serviceWorker?.getRegistrations?.() ?? [];
+    for (const r of regs) await r.unregister();
+  } catch { /* da igual: recargamos de todas formas */ }
+  location.reload();
+};
+document.getElementById('upd-x').onclick = () => { document.getElementById('update').hidden = true; };
+
 document.addEventListener('gym:storage-error', () =>
   toast('No se pudo guardar. ¿Navegación privada o memoria llena?'));
 addEventListener('online', () => syncBoth(false));
 
 render();
 syncBoth(false);
+checkVersion();

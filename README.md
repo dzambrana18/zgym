@@ -68,13 +68,27 @@ En esta máquina hay `git` pero no `gh` CLI ni credenciales de GitHub, así que 
 
 Repositorio: **https://github.com/dzambrana18/zgym** · App publicada: **https://dzambrana18.github.io/zgym/**
 
-Para publicar cambios basta con:
-```bash
-git add -A
-git commit -m "Qué has cambiado"
-git push
-```
+Para publicar cambios:
+
+1. **Sube la versión** en los dos sitios (`npm test` falla si se desincronizan):
+   - `app.js` → `export const VERSION = '1.0.1';`
+   - `version.json` → `{ "version": "1.0.1", "date": "2026-08-05" }`
+2. ```bash
+   npm test
+   git add -A && git commit -m "Qué has cambiado" && git push
+   ```
+
 GitHub Pages reconstruye solo en 1-2 minutos.
+
+### Cómo saben los móviles que hay versión nueva
+
+`version.json` es el único archivo que el service worker **nunca** cachea: se pide siempre a la
+red. Al abrir la app compara esa versión con la constante de `app.js`, que sí viaja dentro del
+paquete cacheado. Si no coinciden, ese móvil tiene una copia vieja y sale una barra lima arriba con
+un botón **Actualizar** que borra las cachés, desregistra el service worker y recarga.
+
+En **Ajustes**, al pie, cada uno ve su versión instalada y si está al día. Si te dicen que algo no
+les funciona, eso es lo primero que hay que mirar.
 
 Si hubiera que configurarlo de cero otra vez: **Settings → Pages → Source: Deploy from a branch →
 `main` / `/ (root)`**. El repo debe ser **público**: Pages no funciona en repos privados con cuenta gratuita.
