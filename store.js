@@ -6,9 +6,19 @@
 // ---------------------------------------------------------------------------
 // CONFIGURACIÓN DE SUPABASE — rellenar tras crear el proyecto (ver README.md).
 // Si se dejan vacíos, la app funciona igual pero solo en local (sin copia en la nube).
+// Vale tanto la clave antigua "anon public" (empieza por eyJ...) como la nueva
+// "publishable" (empieza por sb_publishable_...).
 // ---------------------------------------------------------------------------
-export const SUPABASE_URL = '';
-export const SUPABASE_ANON_KEY = '';
+export const SUPABASE_URL = 'https://plygeoeycaxuutzgpdis.supabase.co';
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBseWdlb2V5Y2F4dXV0emdwZGlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MzUyMzQsImV4cCI6MjEwMTAxMTIzNH0.6oN6a-r8x95pHuvqyz828cht4AA1SBVzcpYauFFJNwc';
+
+// Las claves nuevas (sb_publishable_...) no son JWT: enviarlas como Bearer hace que
+// PostgREST intente decodificarlas y falle. Solo las antiguas van en Authorization.
+function authHeaders() {
+  const h = { apikey: SUPABASE_ANON_KEY };
+  if (SUPABASE_ANON_KEY.startsWith('eyJ')) h.Authorization = `Bearer ${SUPABASE_ANON_KEY}`;
+  return h;
+}
 
 const K = {
   user: 'gym.user',
@@ -178,9 +188,8 @@ export async function syncNow(remoteKeys) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=client_id`, {
         method: 'POST',
         headers: {
+          ...authHeaders(),
           'Content-Type': 'application/json',
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
           Prefer: 'resolution=merge-duplicates,return=minimal',
         },
         body: JSON.stringify(rows),
@@ -203,7 +212,7 @@ export async function syncNow(remoteKeys) {
 async function fetchTable(table, remoteKey) {
   const url = `${SUPABASE_URL}/rest/v1/${table}?user_key=eq.${encodeURIComponent(remoteKey)}&select=*`;
   const res = await fetch(url, {
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    headers: authHeaders(),
   });
   if (!res.ok) throw new Error(`${table}: HTTP ${res.status} ${await res.text()}`);
   return res.json();

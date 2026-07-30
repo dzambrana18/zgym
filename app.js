@@ -153,6 +153,7 @@ function lastDoneText(u, day) {
 // Vistas
 // ---------------------------------------------------------------------------
 function viewChooser() {
+  tabsEl.hidden = true;   // en el selector de usuario no hay navegación
   app.innerHTML = `
     <div class="chooser">
       <div class="head">
@@ -247,14 +248,13 @@ function viewHome() {
           ${lastBody?.weightKg ? fmt(lastBody.weightKg) + ' kg' : '—'}
         </div>
       </div>
-    </button>
-    ${tabs('home')}`;
+    </button>`;
 
   app.querySelectorAll('[data-day]').forEach((b) => {
     b.onclick = () => { state.dayKey = b.dataset.day; state.view = 'day'; state.open = null; state.override = {}; state.draft = {}; render(); };
   });
   app.querySelector('[data-go="body"]').onclick = () => { state.view = 'body'; render(); };
-  wireTabs();
+  wireTabs('home');
 }
 
 function header(title, sub, back) {
@@ -283,16 +283,27 @@ const ICONS = {
   settings: svgIcon('<path d="M3.5 7.5h12.2M20.5 7.5h.2M8.2 16.5h12.3M3.5 16.5h.2"/><circle cx="18" cy="7.5" r="2.2"/><circle cx="6" cy="16.5" r="2.2"/>'),
 };
 
-function tabs(active) {
-  const items = [['home', 'Entreno'], ['diet', 'Dieta'], ['progress', 'Progreso'], ['settings', 'Ajustes']];
-  return `<nav class="tabs">${items.map(([k, l]) =>
-    `<button data-tab="${k}" class="${active === k ? 'on' : ''}"><span class="ic">${ICONS[k]}</span>${l}</button>`).join('')}</nav>`;
+// La barra se construye UNA vez y vive fuera de #app; en cada vista solo cambia
+// qué pestaña está marcada. Así el elemento fijo nunca se destruye ni se recrea.
+const TAB_ITEMS = [['home', 'Entreno'], ['diet', 'Dieta'], ['progress', 'Progreso'], ['settings', 'Ajustes']];
+const tabsEl = document.getElementById('tabs');
+
+tabsEl.innerHTML = TAB_ITEMS.map(([k, l]) =>
+  `<button data-tab="${k}"><span class="ic">${ICONS[k]}</span>${l}</button>`).join('');
+
+tabsEl.querySelectorAll('[data-tab]').forEach((b) => {
+  b.onclick = () => { state.view = b.dataset.tab; state.open = null; state.meal = null; render(); };
+});
+
+function setTab(active) {
+  tabsEl.hidden = false;
+  tabsEl.querySelectorAll('[data-tab]').forEach((b) => {
+    b.classList.toggle('on', b.dataset.tab === active);
+  });
 }
 
-function wireTabs() {
-  app.querySelectorAll('[data-tab]').forEach((b) => {
-    b.onclick = () => { state.view = b.dataset.tab; state.open = null; state.meal = null; render(); };
-  });
+function wireTabs(active) {
+  setTab(active);
   const back = document.getElementById('back');
   if (back) back.onclick = () => { state.view = 'home'; state.open = null; render(); };
 }
@@ -322,11 +333,10 @@ function viewDay() {
     <details class="card">
       <summary style="font-weight:600;cursor:pointer">Calentamiento</summary>
       <p class="cue">${esc(day.warmup)}</p>
-    </details>
-    ${tabs('home')}`;
+    </details>`;
 
   wireDay(u, day, week, today);
-  wireTabs();
+  wireTabs('home');
 }
 
 function exerciseCard(u, day, ex, i, week, today) {
@@ -563,11 +573,10 @@ function viewProgress() {
           </tr>`;
         }).join('')}</tbody>
       </table>`}
-    </div>
-    ${tabs('progress')}`;
+    </div>`;
 
   document.getElementById('ex-pick').onchange = (e) => { state.exKey = e.target.value; render(); };
-  wireTabs();
+  wireTabs('progress');
 }
 
 function viewBody() {
@@ -606,8 +615,7 @@ function viewBody() {
           <td>${r.weightKg ? fmt(r.weightKg) + ' kg' : '—'}</td>
           <td>${r.waistCm ? fmt(r.waistCm) + ' cm' : '—'}</td>
         </tr>`).join('')}</tbody>
-      </table></div>` : ''}
-    ${tabs('home')}`;
+      </table></div>` : ''}`;
 
   document.getElementById('save-body').onclick = () => {
     const w = document.getElementById('bw').value;
@@ -618,7 +626,7 @@ function viewBody() {
     render();
     sync(true);
   };
-  wireTabs();
+  wireTabs('home');
 }
 
 const CATS = [['desayuno', 'Desayunos'], ['comida', 'Comidas'], ['cena', 'Cenas'], ['snack', 'Snacks']];
@@ -690,8 +698,7 @@ function viewDiet() {
     <div class="note" style="margin-top:16px">
       Las calorías son estimaciones de tablas estándar y los precios son orientativos: cambian
       cada temporada. Sirven para acertar el objetivo con un margen del 5-10 %, que es lo que importa.
-    </div>
-    ${tabs('diet')}`;
+    </div>`;
 
   app.querySelectorAll('[data-openmeal]').forEach((b) => {
     b.onclick = () => { state.meal = state.meal === b.dataset.openmeal ? null : b.dataset.openmeal; render(); };
@@ -702,7 +709,7 @@ function viewDiet() {
     navigator.clipboard?.writeText('Lista de la compra\n\n' + l.map((i) => '- ' + i).join('\n'))
       .then(() => toast('Lista copiada al portapapeles')).catch(() => {});
   };
-  wireTabs();
+  wireTabs('diet');
 }
 
 function viewSettings() {
@@ -750,8 +757,7 @@ function viewSettings() {
     <div class="note">
       <strong>Sobre el temporizador:</strong> la cuenta es correcta aunque bloquees el móvil, pero
       <strong>no suena solo</strong>. iOS no permite alarmas fiables en segundo plano sin notificaciones push.
-    </div>
-    ${tabs('settings')}`;
+    </div>`;
 
   document.getElementById('do-sync').onclick = async () => {
     toast('Sincronizando…');
@@ -804,7 +810,7 @@ function viewSettings() {
   document.getElementById('switch').onclick = () => {
     state.user = null; db.setUser(null); state.view = 'home'; render();
   };
-  wireTabs();
+  wireTabs('settings');
 }
 
 // ---------------------------------------------------------------------------

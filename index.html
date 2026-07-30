@@ -23,6 +23,11 @@
 
 <div id="app" aria-live="polite"></div>
 
+<!-- La navegación vive FUERA de #app a propósito: #app se reconstruye entero en cada
+     render y recrear un elemento position:fixed con backdrop-filter hace que iOS lo
+     deje descolocado hasta el siguiente repintado. -->
+<nav class="tabs" id="tabs" hidden></nav>
+
 <div id="toast" class="toast" role="status" hidden></div>
 
 <!-- Barra de descanso: fija abajo, solo visible con el temporizador activo -->
