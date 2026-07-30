@@ -15,8 +15,8 @@ Sitio estático: **sin framework, sin build, sin npm**. GitHub Pages lo sirve ta
 - **Sugerencia de carga** por doble progresión: cuando completas el tope del rango de repeticiones en
   todas las series y con margen, sube el peso el incremento del ejercicio. Si no, repite y suma una repetición.
   Siempre dice *por qué* y muestra qué hiciste la última vez.
-- **Animación de técnica** en cada ejercicio: el patrón de movimiento dibujado en dos posiciones que
-  se alternan en bucle, más el enlace a vídeos reales de YouTube.
+- **Demostración de técnica** en cada ejercicio: dos fotos reales (posición inicial y final) que se
+  alternan como un GIF, más el enlace a vídeos de YouTube.
 - **Mesociclo de 5 semanas**: la semana 3 añade una serie al primer ejercicio de cada sesión y la
   semana 5 es descarga (mitad de series, RIR 4, mismo peso).
 - **Progreso** con un resumen en lenguaje llano (qué sube, qué está parado, cuánto entrenas), 1RM
@@ -32,7 +32,9 @@ Sitio estático: **sin framework, sin build, sin npm**. GitHub Pages lo sirve ta
 | `index.html` | Shell y metadatos de PWA/iOS |
 | `styles.css` | Sistema de diseño **Kinetic Noir** (ver abajo) |
 | `routines.js` | Solo datos: 2 usuarios × 4 días × 63 ejercicios |
-| `moves.js` | Las 32 animaciones de técnica (SVG en dos posiciones) |
+| `photos/` | 45 pares de fotos de técnica (inicio y final), 1,7 MB |
+| `moves.js` | Dibujos SVG de respaldo, por si una foto no carga sin conexión |
+| `i18n.js`, `lang-ca.js`, `lang-en.js` | Español (base), catalán e inglés |
 | `nutrition.js` | Objetivos calóricos y las 20 recetas |
 | `progression.js` | Doble progresión, mesociclo, e1RM. Funciones puras |
 | `store.js` | localStorage + cola de sincronización |
@@ -222,8 +224,19 @@ notificaciones push. Hay que tener la app delante.
 **El gráfico de peso y cintura comparte un eje Y.** Con kg y cm en el mismo rango se lee bien y lo que
 importa es la tendencia; si algún día los valores se separan mucho, habría que meter un segundo eje.
 
-**Las animaciones de técnica son esquemas, no anatomía.** Son figuras de palo dibujadas a mano que
-enseñan el patrón del movimiento y el recorrido. Para los detalles finos está el enlace al vídeo.
+**Las fotos de técnica** vienen de [free-exercise-db](https://github.com/yuhonas/free-exercise-db),
+que está bajo **Unlicense (dominio público)**. Cada ejercicio tiene dos fotogramas que se alternan
+en bucle. Están redimensionadas a 440 px y recomprimidas: 1,7 MB en total, unos 20 KB por imagen.
+
+**No se precargan.** El service worker no las mete en el shell de instalación: se cachean solas la
+primera vez que se abre cada ejercicio. Así la instalación sigue siendo ligera y, en una semana de
+uso normal, quedan todas guardadas. Si una foto no ha llegado a cachearse y estás sin cobertura,
+la app cae al dibujo SVG de `moves.js`, que sí viaja siempre con el código.
+
+**El emparejamiento foto ↔ ejercicio se hizo a mano.** El automático por nombre fallaba en 15 de 65
+y algunos errores eran peligrosos: mapeaba el press militar a "press tras nuca", el remo con barra
+a "remo al mentón" y el pull-over a un curl de bíceps. Una foto equivocada enseña mal con toda la
+confianza del mundo. Si algún día se añade un ejercicio, hay que elegir su foto mirándola.
 
 **Las calorías y los precios de la dieta son estimaciones.** Las kcal salen de tablas de composición
 estándar y sirven para acertar el objetivo con un margen del 5-10 %. Los precios son de referencia

@@ -309,6 +309,24 @@ input[type="number"], input[type="date"] {
 @keyframes mvflip { 0% { opacity: 1; } 50%, 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .mv-b { display: none; } .mv-a { animation: none; opacity: 1; } }
 
+/* Fotos reales: mismo truco de dos fotogramas, apiladas una sobre otra */
+.ph {
+  position: relative; width: 100%; max-width: 320px; aspect-ratio: 3 / 2;
+  margin: 0 auto 14px; border-radius: 12px; overflow: hidden;
+  border: 0.5px solid var(--hair); background: var(--l1);
+}
+.ph img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  animation: mvflip 1.8s steps(1, end) infinite;
+}
+.ph .ph-b { animation-delay: 0.9s; }
+.ph .ph-fb { position: absolute; inset: 0; display: grid; place-items: center; }
+.ph .ph-fb .move { max-width: 100%; height: 100%; border: 0; background: none; margin: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .ph .ph-b { display: none; }
+  .ph .ph-a { animation: none; opacity: 1; }
+}
+
 .cue { font-size: 15px; line-height: 20px; color: var(--fg-var); margin: 0; }
 .vid { display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 600; letter-spacing: 0.03em; text-decoration: none; }
 

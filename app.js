@@ -13,7 +13,7 @@ import {
 // Versión de esta copia de la app. Va emparejada con version.json, que se sirve
 // SIEMPRE desde la red: si no coinciden es que el móvil tiene una copia vieja
 // cacheada. progression.test.mjs comprueba que las dos no se desincronicen.
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';
 
 const app = document.getElementById('app');
 const state = { user: db.getUser(), view: 'home', dayKey: null, open: null, exKey: null, meal: null, override: {}, draft: {} };
@@ -356,6 +356,21 @@ function viewDay() {
   wireTabs('home');
 }
 
+/**
+ * Demostración de técnica: dos fotos reales (inicio y final) alternándose como un GIF.
+ * Si alguna no carga —sin conexión y aún sin cachear— se cae al dibujo SVG, que pesa
+ * unos pocos KB y sí viaja siempre con la app.
+ */
+function tecnica(ex) {
+  const svg = moveSvg(ex.pattern) || '';
+  if (!ex.photo) return svg;
+  return `<div class="ph" data-ph="${ex.key}">
+    <img src="./photos/${ex.photo}-0.jpg" alt="" loading="lazy" decoding="async" class="ph-a">
+    <img src="./photos/${ex.photo}-1.jpg" alt="" loading="lazy" decoding="async" class="ph-b">
+    <div class="ph-fb" hidden>${svg}</div>
+  </div>`;
+}
+
 function exerciseCard(u, day, ex, i, week, today) {
   const nSets = effectiveSets(ex, week, i === 0);
   const history = db.getSetsFor(u, ex.key).filter((s) => s.loggedAt !== today);
@@ -411,7 +426,7 @@ function exerciseCard(u, day, ex, i, week, today) {
         <tbody>${rows}</tbody>
       </table>
       <div class="tech">
-        ${moveSvg(ex.pattern) || ''}
+        ${tecnica(ex)}
         <div class="tech-txt">
           <p class="cue">${esc(exCue(ex))}</p>
           <a class="vid" href="${videoUrl(ex)}" target="_blank" rel="noopener">${t('watchVideo')}</a>
@@ -430,6 +445,15 @@ function wireDay(u, day, week, today) {
   if (!openEx) return;
   const card = app.querySelector(`[data-ex="${state.open}"]`);
   if (!card) return;
+
+  // Si una foto no carga (sin conexión y sin cachear), enseñamos el dibujo
+  card.querySelectorAll('.ph img').forEach((img) => {
+    img.onerror = () => {
+      const cont = img.closest('.ph');
+      cont.querySelectorAll('img').forEach((x) => { x.hidden = true; });
+      cont.querySelector('.ph-fb').hidden = false;
+    };
+  });
 
   card.querySelectorAll('[data-nudge]').forEach((b) => {
     b.onclick = () => {

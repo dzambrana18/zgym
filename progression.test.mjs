@@ -1,5 +1,6 @@
 // Comprobación de la lógica de progresión.  Ejecutar:  node progression.test.mjs
 import assert from 'node:assert/strict';
+import fsSync from 'node:fs';
 import {
   mesocycleWeek, isDeload, targetRir, effectiveSets, e1rm, groupSessions, suggest,
 } from './progression.js';
@@ -128,7 +129,13 @@ for (const [uk, user] of Object.entries(USERS)) {
     // Todo ejercicio necesita su animación de técnica
     assert.ok(MOVES[ex.pattern], `${uk}/${ex.key}: patrón inexistente (${ex.pattern})`);
     assert.match(moveSvg(ex.pattern), /^<svg/, `${uk}/${ex.key}: la animación no genera SVG`);
-    // Toda sugerencia inicial debe ser calculable en las 5 semanas
+    // Toda foto declarada debe existir en disco, con sus dos fotogramas
+    if (ex.photo) {
+      for (const i of [0, 1]) {
+        const f = `photos/${ex.photo}-${i}.jpg`;
+        assert.ok(fsSync.existsSync(f), `${uk}/${ex.key}: falta ${f}`);
+      }
+    }    // Toda sugerencia inicial debe ser calculable en las 5 semanas
     for (let w = 1; w <= 5; w++) assert.ok(suggest(ex, [], w).weight >= 0);
   }
   // Cada día debe cerrar con un ejercicio de core
