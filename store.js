@@ -199,6 +199,67 @@ export async function syncNow(remoteKeys) {
   return { ok: true, sent: queue.length };
 }
 
+// --- recuperar desde la nube ----------------------------------------------
+async function fetchTable(table, remoteKey) {
+  const url = `${SUPABASE_URL}/rest/v1/${table}?user_key=eq.${encodeURIComponent(remoteKey)}&select=*`;
+  const res = await fetch(url, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+  });
+  if (!res.ok) throw new Error(`${table}: HTTP ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+/**
+ * Baja lo que haya en Supabase y lo fusiona con lo local.
+ * Sin esto, si un móvil pierde el localStorage los datos estarían en la nube pero
+ * la app no los recuperaría nunca — que es justo para lo que sirve tener nube.
+ *
+ * Fusión por clientId: lo LOCAL siempre gana, porque puede tener ediciones aún sin
+ * subir. De la nube solo entran las filas que aquí no existen.
+ */
+export async function pullFromCloud(remoteKeys) {
+  if (!isConfigured()) return { ok: false, error: 'sin-configurar' };
+  if (!navigator.onLine) return { ok: false, error: 'sin-conexion' };
+
+  let nuevasSets = 0, nuevasBody = 0;
+  try {
+    for (const [userKey, remote] of Object.entries(remoteKeys)) {
+      const sets = await fetchTable('sets_log', remote);
+      const locales = getSets(userKey);
+      const vistos = new Set(locales.map((s) => s.clientId));
+      for (const r of sets) {
+        if (vistos.has(r.client_id)) continue;
+        locales.push({
+          clientId: r.client_id, loggedAt: r.logged_at, dayKey: r.day_key,
+          exerciseKey: r.exercise_key, setIndex: r.set_index,
+          weight: r.weight == null ? null : Number(r.weight),
+          reps: r.reps == null ? null : Number(r.reps),
+          rir: r.rir == null ? null : Number(r.rir),
+        });
+        nuevasSets++;
+      }
+      write(K.sets(userKey), locales);
+
+      const body = await fetchTable('body_log', remote);
+      const bl = read(K.body(userKey), []);
+      const vb = new Set(bl.map((b) => b.clientId));
+      for (const r of body) {
+        if (vb.has(r.client_id)) continue;
+        bl.push({
+          clientId: r.client_id, loggedAt: r.logged_at,
+          weightKg: r.weight_kg == null ? null : Number(r.weight_kg),
+          waistCm: r.waist_cm == null ? null : Number(r.waist_cm),
+        });
+        nuevasBody++;
+      }
+      write(K.body(userKey), bl);
+    }
+  } catch (err) {
+    return { ok: false, error: String(err.message || err) };
+  }
+  return { ok: true, sets: nuevasSets, body: nuevasBody };
+}
+
 // --- copia de seguridad manual --------------------------------------------
 export function exportAll() {
   const users = ['anna', 'david'];

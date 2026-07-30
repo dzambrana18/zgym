@@ -724,6 +724,7 @@ function viewSettings() {
       ${last ? `<p class="muted" style="margin:0 0 10px">Última subida: ${new Date(last).toLocaleString('es-ES')}</p>` : ''}
       <div class="btn-row">
         <button class="btn" id="do-sync" ${db.isConfigured() ? '' : 'disabled'}>Sincronizar ahora</button>
+        <button class="btn" id="do-pull" ${db.isConfigured() ? '' : 'disabled'}>Recuperar de la nube</button>
         <button class="btn" id="do-export">Descargar copia</button>
         <button class="btn" id="do-import">Restaurar copia</button>
       </div>
@@ -756,6 +757,16 @@ function viewSettings() {
     toast('Sincronizando…');
     const r = await sync(false);
     toast(r.ok ? (r.sent ? `${r.sent} registro(s) subidos` : 'Nada pendiente') : `Error: ${r.error}`);
+    render();
+  };
+
+  document.getElementById('do-pull').onclick = async () => {
+    toast('Buscando en la nube…');
+    const r = await db.pullFromCloud(remoteKeys());
+    if (!r.ok) { toast(`Error: ${r.error}`); return; }
+    toast(r.sets || r.body
+      ? `Recuperados ${r.sets} series y ${r.body} pesajes`
+      : 'No había nada nuevo que recuperar');
     render();
   };
 
@@ -797,12 +808,24 @@ function viewSettings() {
 }
 
 // ---------------------------------------------------------------------------
+const remoteKeys = () => Object.fromEntries(Object.entries(USERS).map(([k, v]) => [k, v.remoteKey]));
+
 async function sync(silent) {
   if (!db.isConfigured()) return { ok: false, error: 'sin-configurar' };
-  const remoteKeys = Object.fromEntries(Object.entries(USERS).map(([k, v]) => [k, v.remoteKey]));
-  const r = await db.syncNow(remoteKeys);
+  const r = await db.syncNow(remoteKeys());
   if (!silent && !r.ok && r.error !== 'sin-configurar') console.warn('sync', r.error);
   return r;
+}
+
+/** Sube lo pendiente y baja lo que falte. Al arrancar, para que un móvil nuevo se llene solo. */
+async function syncBoth(silent) {
+  const up = await sync(true);
+  const down = await db.pullFromCloud(remoteKeys());
+  if (down.ok && (down.sets || down.body) && !silent) {
+    toast(`Recuperados ${down.sets} registros de la nube`);
+    render();
+  }
+  return { up, down };
 }
 
 // Al cambiar de pantalla hay que volver arriba. Si no, iOS conserva el scroll de la
@@ -822,7 +845,7 @@ function render() {
 
 document.addEventListener('gym:storage-error', () =>
   toast('No se pudo guardar. ¿Navegación privada o memoria llena?'));
-addEventListener('online', () => sync(true));
+addEventListener('online', () => syncBoth(false));
 
 render();
-sync(true);
+syncBoth(false);
