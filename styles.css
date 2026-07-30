@@ -78,7 +78,14 @@ input[type="number"], input[type="date"] {
   letter-spacing: -0.02em;
 }
 
-#app { max-width: 720px; margin: 0 auto; padding: 0 var(--pad) 148px; }
+/* min-height con la altura dinámica del viewport: una pantalla con poco contenido
+   (Progreso sin registros) debe ocupar igualmente todo el alto, o en iOS la barra
+   inferior fija se descoloca. 100vh como respaldo para navegadores sin dvh. */
+#app {
+  max-width: 720px; margin: 0 auto; padding: 0 var(--pad) 148px;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
 
 /* ---------- barra superior: glass fija ---------- */
 .top {
@@ -350,6 +357,7 @@ select.picker:focus { outline: none; border-color: var(--lime); }
   background: rgba(26, 27, 31, 0.78);
   backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
   border-top: 1px solid var(--hair);
+  transform: translateZ(0);
 }
 .rest-time {
   font-size: 34px; line-height: 38px; font-weight: 500; letter-spacing: -0.04em;
@@ -377,6 +385,8 @@ select.picker:focus { outline: none; border-color: var(--lime); }
   backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
   border-top: 1px solid var(--hair);
   padding-bottom: env(safe-area-inset-bottom);
+  /* capa propia: en iOS reduce que el elemento fijo salte durante el rebote del scroll */
+  transform: translateZ(0);
 }
 .tabs button {
   flex: 1; border: 0; background: none; cursor: pointer;

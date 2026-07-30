@@ -805,9 +805,19 @@ async function sync(silent) {
   return r;
 }
 
+// Al cambiar de pantalla hay que volver arriba. Si no, iOS conserva el scroll de la
+// pantalla anterior y, cuando la nueva es más corta, la barra inferior fija se queda
+// flotando con un hueco negro debajo hasta que tocas el scroll.
+// Solo en cambio de vista: al re-renderizar tras marcar una serie hay que quedarse donde estás.
+let lastView = null;
 function render() {
   if (!state.user || !USERS[state.user]) return viewChooser();
   ({ home: viewHome, day: viewDay, diet: viewDiet, progress: viewProgress, body: viewBody, settings: viewSettings }[state.view] || viewHome)();
+  const viewId = `${state.view}:${state.dayKey || ''}`;
+  if (viewId !== lastView) {
+    lastView = viewId;
+    window.scrollTo(0, 0);
+  }
 }
 
 document.addEventListener('gym:storage-error', () =>
