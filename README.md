@@ -1,12 +1,24 @@
-# Entreno — Anna y David
+# Entreno
 
 Web app de registro de entrenamiento. Se abre desde el móvil como una app, funciona **sin cobertura
-en el gimnasio**, y calcula sola qué peso toca hoy en cada ejercicio aplicando la doble progresión de
-`Anna.pdf` y `David.pdf`.
+en el gimnasio**, y calcula sola qué peso toca hoy en cada ejercicio aplicando doble progresión.
+Las rutinas originales salen de `Anna.pdf` y `David.pdf`; cualquier persona nueva puede **crearse
+una cuenta** y la app le genera rutina y dieta a partir de un cuestionario.
 
 Sitio estático: **sin framework, sin build, sin npm**. GitHub Pages lo sirve tal cual.
 
 ## Cómo funciona
+
+- **Login con usuario y PIN.** Cada persona tiene su cuenta. El primer login necesita conexión;
+  a partir de ahí la sesión y la rutina quedan cacheadas y todo funciona offline.
+- **Alta con cuestionario.** Edad, sexo, peso, altura, experiencia, días por semana y objetivo.
+  Con eso la app elige una plantilla de rutina (los mismos días y ejercicios del catálogo, con
+  RIR más alto para principiantes) y calcula las calorías con Mifflin-St Jeor. Se entrena desde
+  el minuto uno.
+- **Superadmin.** David (`is_admin` en su fila de `users`) ve un panel de administración en
+  Ajustes: entrar en la cuenta de cualquiera (ver su rutina, progreso y registros), editar su
+  rutina (series, reps, RIR, descansos, cargas, añadir o quitar ejercicios del catálogo),
+  cambiar PINs y borrar cuentas.
 
 - **Sabe qué día es.** Al abrirla te dice qué sesión toca hoy según el calendario del plan, y marca
   esa tarjeta. Puedes entrar en cualquier otra y registrarla con normalidad, pero avisa de que te
@@ -31,7 +43,8 @@ Sitio estático: **sin framework, sin build, sin npm**. GitHub Pages lo sirve ta
 |---|---|
 | `index.html` | Shell y metadatos de PWA/iOS |
 | `styles.css` | Sistema de diseño **Kinetic Noir** (ver abajo) |
-| `routines.js` | Solo datos: 2 usuarios × 4 días × 63 ejercicios |
+| `routines.js` | Solo datos: rutinas de anna/david/jan + catálogo `EXERCISES`/`DAYS` derivado |
+| `accounts.js` | Login con PIN, alta con cuestionario, generación de rutina/dieta, resolver de rutinas JSON |
 | `photos/` | 45 pares de fotos de técnica (inicio y final), 1,7 MB |
 | `moves.js` | Dibujos SVG de respaldo, por si una foto no carga sin conexión |
 | `i18n.js`, `lang-ca.js`, `lang-en.js` | Español (base), catalán e inglés |
@@ -139,8 +152,9 @@ create table body_log (
 alter table sets_log enable row level security;
 alter table body_log enable row level security;
 
--- La app no tiene login, así que el rol anónimo necesita insertar, leer y actualizar.
--- UPDATE es imprescindible: el upsert por client_id hace UPDATE al reeditar una serie.
+-- El login es un PIN comprobado en el cliente, así que el rol anónimo necesita
+-- insertar, leer y actualizar. UPDATE es imprescindible: el upsert por client_id
+-- hace UPDATE al reeditar una serie.
 create policy "anon rw sets" on sets_log for select to anon using (true);
 create policy "anon ins sets" on sets_log for insert to anon with check (true);
 create policy "anon upd sets" on sets_log for update to anon using (true) with check (true);
@@ -153,6 +167,41 @@ grant select, insert, update on sets_log, body_log to anon;
 grant usage, select on all sequences in schema public to anon;
 ```
 
+3. La tabla de **cuentas** (v1.4.0). Guarda login, perfil del cuestionario, objetivos de dieta
+   y la rutina como JSON — las de anna/david/jan siguen viviendo en `routines.js` y su fila
+   solo dice `{"builtin":"anna"}`:
+
+```sql
+create table users (
+  username   text primary key,            -- minúsculas, único
+  name       text not null,
+  pin_hash   text not null,               -- hex sha256('username:PIN')
+  is_admin   boolean not null default false,
+  remote_key text unique not null,        -- enlaza con sets_log/body_log.user_key
+  profile    jsonb,                       -- respuestas del cuestionario
+  routine    jsonb not null,              -- {"builtin":"anna"} o JSON con refs al catálogo
+  targets    jsonb,                       -- null => usa TARGETS[username] de nutrition.js
+  created_at timestamptz not null default now()
+);
+alter table users enable row level security;
+create policy "anon all users" on users for all to anon using (true) with check (true);
+grant select, insert, update, delete on users to anon;
+
+-- Semilla: los 3 usuarios originales. Los hashes se calculan en la consola del
+-- navegador (F12) con:
+--   const h = async (u,p) => [...new Uint8Array(await crypto.subtle.digest('SHA-256',
+--     new TextEncoder().encode(u+':'+p)))].map(b=>b.toString(16).padStart(2,'0')).join('');
+--   await h('anna', '1234')
+insert into users (username, name, pin_hash, is_admin, remote_key, routine) values
+  ('anna',  'Anna',  '<hash de anna:PIN>',  false, 'anna_7f3c91',  '{"builtin":"anna"}'),
+  ('david', 'David', '<hash de david:PIN>', true,  'david_2b8e46', '{"builtin":"david"}'),
+  ('jan',   'Jan',   '<hash de jan:PIN>',   false, 'jan_5d1a83',   '{"builtin":"jan"}');
+```
+
+Al publicar la v1.4.0, en los móviles que ya tenían la app sale la pantalla de login **una sola
+vez** con su usuario precargado: el username coincide con la clave local de siempre
+(`anna`/`david`/`jan`), así que todo el historial del móvil y de la nube cuadra sin migrar nada.
+
 3. En **Project Settings → API**, copia la *Project URL* y la clave `anon public`.
 4. Pégalas al principio de `store.js`:
    ```js
@@ -161,40 +210,27 @@ grant usage, select on all sequences in schema public to anon;
    ```
 5. `git commit` y `git push`. En **Ajustes** de la app aparecerá el estado de sincronización.
 
-## Crecer a 3-4 personas: añadir login
+## El modelo de cuentas (v1.4.0) y cómo endurecerlo
 
-El modelo actual (clave `anon`, `user_key` no adivinable) vale para dos personas que se conocen.
-Con más gente cada uno querrá que sus datos sean suyos, y eso exige autenticación real.
-La migración es **aditiva**: no se pierde ni un registro.
+El login actual es **usuario + PIN comprobado en el cliente** contra la tabla `users` (el hash
+del PIN viaja con la clave `anon`, que es pública). Para un grupo de amigos de gimnasio es
+suficiente y no pide emails ni contraseñas; como seguridad real, es teatro — igual que antes.
 
-1. **Activar Supabase Auth** con *magic link* por email (sin contraseñas que recordar).
-   Authentication → Providers → Email → *Enable*.
-2. **Añadir la columna de propietario** y rellenarla con los usuarios actuales:
-   ```sql
-   alter table sets_log add column owner uuid references auth.users(id);
-   alter table body_log add column owner uuid references auth.users(id);
-   -- backfill: mapear cada user_key al uid del usuario ya registrado
-   update sets_log set owner = 'UID-DE-ANNA'  where user_key = 'anna_7f3c91';
-   update sets_log set owner = 'UID-DE-DAVID' where user_key = 'david_2b8e46';
-   ```
-3. **Cambiar las políticas** para que cada uno vea solo lo suyo:
-   ```sql
-   drop policy "anon sel sets" on sets_log;   -- y las demás de anon
-   create policy "propios sets" on sets_log
-     for all to authenticated
-     using (owner = auth.uid()) with check (owner = auth.uid());
-   ```
-4. **En la app**: una pantalla de login que pide el email y llama a
-   `POST /auth/v1/otp`. El token de sesión sustituye a la clave `anon` en la cabecera
-   `Authorization`. El selector Anna/David desaparece: el usuario sale de la sesión.
+Si el grupo crece o alguien quiere privacidad de verdad, el upgrade es **Supabase Auth con
+email + contraseña (o magic link)**, y la migración es aditiva:
 
-Trabajo estimado: una pantalla nueva y unas 80-100 líneas en `store.js`. El resto de la app
-no se entera, porque `user_key` ya está aislado en `routines.js`.
+1. Authentication → Providers → Email → *Enable*.
+2. `alter table users add column auth_uid uuid references auth.users(id);` y rellenarla al
+   registrar cada email. Ídem `owner uuid` en `sets_log`/`body_log` con backfill por `user_key`.
+3. Cambiar las políticas de `anon` a `authenticated using (owner = auth.uid())`, con una
+   política extra para el uid de David (admin).
+4. En la app: la pantalla de login pasa a pedir email y el token de sesión sustituye a la clave
+   `anon` en la cabecera `Authorization`. El resto no cambia: la rutina ya viene de la fila de
+   `users` y `remote_key` ya aísla los registros.
 
 **Acceso de administrador:** David es el dueño del proyecto de Supabase, así que ya tiene acceso
-total a la base de datos desde el panel — eso no depende de las políticas RLS, que solo gobiernan
-lo que la app puede leer y escribir. Si además quiere ver los datos de todos *dentro de la app*,
-se añade una política extra con su uid.
+total a la base de datos desde el panel — eso no depende de las políticas RLS. Dentro de la app,
+el panel de administración se enseña a quien tiene `is_admin` en su fila.
 
 ## Límites del plan gratuito
 
@@ -209,13 +245,12 @@ se añade una política extra con su uid.
 ## Lo que hay que saber
 
 **El repo es público y la clave `anon` va en el cliente.** No hay forma de esconderla en un sitio
-estático. Con estas políticas, quien encuentre el repo **puede leer y escribir los registros de
-entrenamiento**. Lo que se expone en el peor caso: dos nombres de pila, kilos levantados, peso
-corporal y cintura. Ningún dato de contacto ni credencial reutilizable. Por eso `user_key` no es
-`anna` sino un valor no adivinable (`anna_7f3c91`), definido en `routines.js`.
-
-Si eso no basta, el upgrade es **Supabase Auth con magic link**: añade una pantalla de login y unas 60
-líneas, y aísla los datos de verdad. El modelo de datos no cambia, así que se puede hacer después.
+estático. Con estas políticas, quien encuentre el repo **puede leer y escribir la tabla de
+cuentas y los registros de entrenamiento**. Lo que se expone en el peor caso: nombres, respuestas
+del cuestionario (edad, peso, altura, objetivo), kilos levantados y hashes de PIN. Ningún dato de
+contacto ni credencial reutilizable — no uses como PIN nada que uses en otro sitio. El login por
+PIN es una puerta de jardín, no una caja fuerte; si hace falta más, el camino es Supabase Auth
+(sección anterior).
 
 **El temporizador de descanso no suena solo.** Se calcula por diferencia de timestamp, así que la
 cuenta es correcta aunque bloquees el móvil, pero iOS no permite alarmas fiables en segundo plano sin

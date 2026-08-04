@@ -1,4 +1,5 @@
-import { USERS, findDay, allExercises, videoUrl, todaysDay, nextDay, weekdayIndex } from './routines.js';
+import { EXERCISES, DAYS, findDay, allExercises, videoUrl, todaysDay, nextDay, weekdayIndex } from './routines.js';
+import { login, signup, resolveRoutine, materialize, normalizeUsername, validPin, hashPin, exOverrides } from './accounts.js';
 import { moveSvg } from './moves.js';
 import { TARGETS, MEALS, SAMPLE_DAY, mealByKey, dayTotals, shoppingList } from './nutrition.js';
 import {
@@ -13,7 +14,7 @@ import {
 // Versión de esta copia de la app. Va emparejada con version.json, que se sirve
 // SIEMPRE desde la red: si no coinciden es que el móvil tiene una copia vieja
 // cacheada. progression.test.mjs comprueba que las dos no se desincronicen.
-export const VERSION = '1.3.0';
+export const VERSION = '1.4.0';
 
 const app = document.getElementById('app');
 const state = { user: db.getUser(), view: 'home', dayKey: null, open: null, exKey: null, meal: null, override: {}, draft: {} };
@@ -136,7 +137,9 @@ function chart(series) {
 // ---------------------------------------------------------------------------
 function ctx() {
   const u = state.user;
-  const user = USERS[u];
+  // La rutina sale de la fila de cuenta cacheada: builtin (anna/david/jan, viven en
+  // routines.js) o JSON con refs al catálogo (usuarios creados desde la app).
+  const user = resolveRoutine(db.getAccount(u));
   const start = db.getMesocycleStart(u);
   const week = mesocycleWeek(start, db.todayISO());
   return { u, user, start, week };
@@ -161,28 +164,115 @@ function lastDoneText(u, day) {
 // ---------------------------------------------------------------------------
 // Vistas
 // ---------------------------------------------------------------------------
-function viewChooser() {
-  tabsEl.hidden = true;   // en el selector de usuario no hay navegación
+function viewLogin() {
+  tabsEl.hidden = true;   // sin sesión no hay navegación
+  // Un móvil que viene de la versión sin login tiene gym.user pero no cuenta cacheada:
+  // se le precarga su usuario y solo tiene que poner el PIN una vez.
+  const previo = db.getUser();
   app.innerHTML = `
     <div class="chooser">
       <div class="head">
-        <div class="kicker">${t('chooserKicker')}</div>
-        <h1>${t('chooserTitle')}</h1>
+        <div class="kicker">${t('loginKicker')}</div>
+        <h1>${t('loginTitle')}</h1>
       </div>
-      ${Object.entries(USERS).map(([k, v]) => `
-        <button class="card tap" data-pick="${k}">
-          <h2>${esc(v.name)}</h2>
-          <p class="muted" style="margin:8px 0 0">${esc(userSubtitle(k, v))}</p>
-        </button>`).join('')}
+      <div class="card">
+        <div class="field"><label for="lg-user">${t('loginUser')}</label>
+          <input id="lg-user" autocapitalize="none" autocomplete="username" value="${esc(previo || '')}"></div>
+        <div class="field"><label for="lg-pin">${t('loginPin')}</label>
+          <input id="lg-pin" type="password" autocomplete="current-password" maxlength="20"></div>
+        <button class="btn primary wide" id="lg-go">${t('loginBtn')}</button>
+      </div>
+      <button class="card tap" id="lg-new">
+        <h2>${t('loginCreateTitle')}</h2>
+        <p class="muted" style="margin:8px 0 0">${t('loginCreateSub')}</p>
+      </button>
     </div>`;
-  app.querySelectorAll('[data-pick]').forEach((b) => {
-    b.onclick = () => { state.user = b.dataset.pick; db.setUser(state.user); state.view = 'home'; render(); };
-  });
+  document.getElementById('lg-go').onclick = async () => {
+    const btn = document.getElementById('lg-go');
+    btn.disabled = true;
+    const r = await login(document.getElementById('lg-user').value, document.getElementById('lg-pin').value);
+    if (r.error) { btn.disabled = false; toast(t(r.error)); return; }
+    state.user = r.row.username;
+    state.view = 'home';
+    render();
+    syncBoth(false);
+  };
+  document.getElementById('lg-new').onclick = () => { state.view = 'signup'; render(); };
+}
+
+// Formulario de alta: datos de acceso + cuestionario. Con las respuestas se genera
+// la rutina (plantillas del catálogo) y los objetivos de dieta (Mifflin-St Jeor).
+function viewSignup() {
+  tabsEl.hidden = true;
+  const sel = (id, label, opts) => `
+    <div class="field"><label for="${id}">${label}</label>
+      <select id="${id}" class="picker" style="margin:0">${opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></div>`;
+  const num = (id, label, min, max, ph = '') => `
+    <div class="field"><label for="${id}">${label}</label>
+      <input id="${id}" type="number" inputmode="numeric" min="${min}" max="${max}" placeholder="${ph}"></div>`;
+
+  app.innerHTML = `
+    <div class="chooser">
+      <div class="head">
+        <div class="kicker">${t('loginKicker')}</div>
+        <h1>${t('suTitle')}</h1>
+      </div>
+      <div class="card">
+        <div class="kicker" style="margin-bottom:8px">${t('suAccessKicker')}</div>
+        <div class="field"><label for="su-name">${t('suName')}</label>
+          <input id="su-name" autocomplete="name" placeholder="John Smith"></div>
+        <div class="field"><label for="su-user">${t('loginUser')}</label>
+          <input id="su-user" autocapitalize="none" autocomplete="username" placeholder="johnsmith">
+          <p class="muted" style="margin:6px 0 0;font-size:12px">${t('suUserHint')}</p></div>
+        <div class="field"><label for="su-pin">${t('suPin')}</label>
+          <input id="su-pin" type="password" maxlength="20" autocomplete="new-password"></div>
+      </div>
+      <div class="card">
+        <div class="kicker" style="margin-bottom:8px">${t('suQuizKicker')}</div>
+        ${num('su-age', t('suAge'), 14, 90)}
+        ${sel('su-sex', t('suSex'), [['f', t('suSexF')], ['m', t('suSexM')]])}
+        ${num('su-weight', t('fieldWeight'), 30, 250)}
+        ${num('su-height', t('suHeight'), 120, 230)}
+        ${sel('su-exp', t('suExp'), [['nuevo', t('suExp0')], ['medio', t('suExp1')], ['avanzado', t('suExp2')]])}
+        ${sel('su-days', t('suDays'), [['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']])}
+        ${sel('su-goal', t('suGoal'), [['musculo', t('suGoalMuscle')], ['grasa', t('suGoalFat')], ['forma', t('suGoalFit')]])}
+        <button class="btn primary wide" id="su-go">${t('suCreate')}</button>
+      </div>
+      <button class="btn wide ghost" id="su-back">${t('back')}</button>
+    </div>`;
+
+  const $ = (id) => document.getElementById(id);
+  $('su-days').value = '3';
+  // Sugerencia de username a partir del nombre, solo mientras no lo hayan tocado
+  let userTouched = false;
+  $('su-user').oninput = () => { userTouched = true; };
+  $('su-name').oninput = () => { if (!userTouched) $('su-user').value = normalizeUsername($('su-name').value); };
+
+  $('su-go').onclick = async () => {
+    const nv = (id) => Number($(id).value);
+    const profile = {
+      age: nv('su-age'), sex: $('su-sex').value, weightKg: nv('su-weight'), heightCm: nv('su-height'),
+      experience: $('su-exp').value, daysPerWeek: nv('su-days'), goal: $('su-goal').value,
+    };
+    if (!$('su-name').value.trim()) { toast(t('suNeedName')); return; }
+    if (!(profile.age >= 14 && profile.age <= 90) || !(profile.weightKg >= 30 && profile.weightKg <= 250)
+      || !(profile.heightCm >= 120 && profile.heightCm <= 230)) { toast(t('suNeedData')); return; }
+    const btn = $('su-go');
+    btn.disabled = true;
+    const r = await signup({ name: $('su-name').value, username: $('su-user').value, pin: $('su-pin').value, profile });
+    if (r.error) { btn.disabled = false; toast(t(r.error)); return; }
+    state.user = r.row.username;
+    state.view = 'home';
+    toast(t('suDone'));
+    render();
+    sync(true);
+  };
+  $('su-back').onclick = () => { state.view = 'home'; render(); };
 }
 
 /** Qué toca hoy según el calendario del plan. */
-function hoyBanner(u) {
-  const hoy = todaysDay(u);
+function hoyBanner(u, user) {
+  const hoy = todaysDay(user);
   if (hoy) {
     const p = dayProgress(u, hoy, mesocycleWeek(db.getMesocycleStart(u), db.todayISO()));
     return `<div class="note today-note">
@@ -190,7 +280,7 @@ function hoyBanner(u) {
       ${p.done >= p.total && p.total > 0 ? t('todayDone') : ''}
     </div>`;
   }
-  const sig = nextDay(u);
+  const sig = nextDay(user);
   return `<div class="note">
     <strong>${t('restDay')}</strong> ${sig
       ? t('nextSession', esc(dayName(sig.day)), sig.enDias === 1 ? t('tomorrow') : t('inDays', sig.enDias))
@@ -201,7 +291,7 @@ function hoyBanner(u) {
 function viewHome() {
   const { u, user, week } = ctx();
   const dl = isDeload(week);
-  const hoy = todaysDay(u);
+  const hoy = todaysDay(user);
   const body = db.getBody(u);
   const lastBody = body.at(-1);
 
@@ -225,7 +315,7 @@ function viewHome() {
         : t('hintDefault')}</div>
     </div>
 
-    ${hoyBanner(u)}
+    ${hoyBanner(u, user)}
 
     ${user.days.map((d) => {
       const p = dayProgress(u, d, week);
@@ -329,12 +419,12 @@ function wireTabs(active) {
 
 function viewDay() {
   const { u, user, week } = ctx();
-  const day = findDay(u, state.dayKey);
+  const day = findDay(user, state.dayKey);
   if (!day) { state.view = 'home'; return render(); }
   const today = db.todayISO();
 
   // Aviso si esta no es la sesión que toca hoy. No bloquea: solo avisa.
-  const hoy = todaysDay(u);
+  const hoy = todaysDay(user);
   const fuera = !hoy || hoy.key !== day.key;
   const avisoDia = !fuera ? '' : `<div class="note warn">
     <strong>${t('offPlanTitle')}</strong>
@@ -489,8 +579,8 @@ function wireDay(u, day, week, today) {
  * Lectura del histórico en lenguaje llano: qué sube, qué está parado y cuánto entrenas.
  * Es lo que sirve para decidir si hay que tocar el plan.
  */
-function summarize(u) {
-  const list = allExercises(u);
+function summarize(u, user) {
+  const list = allExercises(user);
   const sets = db.getSets(u).filter((s) => s.reps > 0);
   const dates = [...new Set(sets.map((s) => s.loggedAt))].sort();
 
@@ -526,8 +616,8 @@ function summarize(u) {
   return { subiendo, parados, recientes, totalSesiones: dates.length, peso, cintura };
 }
 
-function viewSummary(u) {
-  const s = summarize(u);
+function viewSummary(u, user) {
+  const s = summarize(u, user);
   if (s.totalSesiones === 0) {
     return `<div class="card"><div class="kicker">${t('summary')}</div>
       <p class="muted" style="margin:8px 0 0">${t('summaryEmpty')}</p></div>`;
@@ -555,7 +645,8 @@ function viewSummary(u) {
 
 function viewProgress() {
   const { u, user } = ctx();
-  const list = allExercises(u);
+  const list = allExercises(user);
+  if (list.length === 0) { state.view = 'home'; return render(); }
   const key = state.exKey && list.some((e) => e.key === state.exKey) ? state.exKey : list[0].key;
   state.exKey = key;
   const ex = list.find((e) => e.key === key);
@@ -573,9 +664,9 @@ function viewProgress() {
 
   app.innerHTML = `
     ${header(t('tabProgress'), user.name, false)}
-    ${viewSummary(u)}
+    ${viewSummary(u, user)}
     <select class="picker" id="ex-pick">
-      ${USERS[u].days.map((d) => `<optgroup label="${esc(dayName(d))}">
+      ${user.days.map((d) => `<optgroup label="${esc(dayName(d))}">
         ${d.exercises.map((e) => `<option value="${e.key}" ${e.key === key ? 'selected' : ''}>${esc(exName(e))}</option>`).join('')}
       </optgroup>`).join('')}
     </select>
@@ -617,13 +708,13 @@ function viewProgress() {
 }
 
 function viewBody() {
-  const { u } = ctx();
+  const { u, user } = ctx();
   const rows = db.getBody(u);
   const wPoints = rows.filter((r) => r.weightKg).map((r) => ({ x: Date.parse(r.loggedAt), y: r.weightKg }));
   const cPoints = rows.filter((r) => r.waistCm).map((r) => ({ x: Date.parse(r.loggedAt), y: r.waistCm }));
 
   app.innerHTML = `
-    ${header(t('bodyTitle'), USERS[u].name, true)}
+    ${header(t('bodyTitle'), user.name, true)}
     <div class="note">${t('bodyNote')}</div>
 
     <div class="card">
@@ -669,9 +760,12 @@ const CATS = [['desayuno', 'catBreakfast'], ['comida', 'catLunch'], ['cena', 'ca
 
 function viewDiet() {
   const { u, user } = ctx();
-  const tg = TARGETS[u];
+  // Usuarios creados desde la app: objetivos calculados del cuestionario, en su fila.
+  // Los originales no tienen `targets` en la fila y caen a los de nutrition.js.
+  const tg = db.getAccount(u)?.targets || TARGETS[u];
   const tot = dayTotals(u);
   const difKcal = Math.round(tot.kcal - tg.kcal);
+  const conEjemplo = (SAMPLE_DAY[u] || []).length > 0;
 
   const mealCard = (m, slot, half) => {
     const abierto = state.meal === m.key;
@@ -710,7 +804,7 @@ function viewDiet() {
 
     <div class="note"><strong>${t('proteinLabel')}</strong> ${esc(targetField(u, 'proteinaNota', tg.proteinaNota))}</div>
 
-    <div class="card">
+    ${conEjemplo ? `<div class="card">
       <div class="kicker">${t('sampleDay')}</div>
       <p class="muted" style="margin:4px 0 0">${t('sampleSums', Math.round(tot.kcal), Math.round(tot.prot), fmt(Math.round(tot.price * 100) / 100))}
       ${Math.abs(difKcal) <= 120 ? t('sampleFits')
@@ -721,7 +815,7 @@ function viewDiet() {
 
     <div class="card">
       <button class="btn wide" id="lista">${t('shoppingBtn')}</button>
-    </div>
+    </div>` : ''}
 
     <div class="sec-title">${t('allRecipes')}</div>
     ${CATS.map(([c, label]) => `
@@ -734,7 +828,8 @@ function viewDiet() {
   app.querySelectorAll('[data-openmeal]').forEach((b) => {
     b.onclick = () => { state.meal = state.meal === b.dataset.openmeal ? null : b.dataset.openmeal; render(); };
   });
-  document.getElementById('lista').onclick = () => {
+  const lista = document.getElementById('lista');
+  if (lista) lista.onclick = () => {
     const l = shoppingList(u);
     navigator.clipboard?.writeText(t('shoppingTitle') + '\n\n' + l.map((i) => '- ' + i).join('\n'))
       .then(() => toast(t('shoppingCopied'))).catch(() => {});
@@ -785,9 +880,16 @@ function viewSettings() {
       <button class="btn wide" id="reset-meso">${t('mesoReset')}</button>
     </div>
 
+    ${db.getAccount(db.getUser())?.is_admin ? `<div class="card">
+      <div class="kicker">${t('adminKicker')}</div>
+      <p class="muted" style="margin:4px 0 10px">${t('adminSub')}</p>
+      <button class="btn wide" id="go-admin">${t('adminTitle')}</button>
+    </div>` : ''}
+
     <div class="card">
       <div class="kicker">${t('account')}</div>
-      <button class="btn wide ghost" id="switch">${t('switchUser')}</button>
+      <p class="muted" style="margin:4px 0 10px">@${esc(u)}</p>
+      <button class="btn wide ghost" id="logout">${t('logout')}</button>
     </div>
 
     <div class="note">${t('timerNote')}</div>
@@ -840,9 +942,13 @@ function viewSettings() {
     toast(t('mesoResetDone'));
     render();
   };
-  document.getElementById('switch').onclick = () => {
+  document.getElementById('logout').onclick = () => {
+    // Solo cierra la sesión: los datos y la cuenta cacheada se quedan, así el
+    // siguiente login del mismo usuario funciona incluso sin cobertura.
     state.user = null; db.setUser(null); state.view = 'home'; render();
   };
+  const goAdmin = document.getElementById('go-admin');
+  if (goAdmin) goAdmin.onclick = () => { state.view = 'admin'; render(); };
 
   app.querySelectorAll('[data-lang]').forEach((b) => {
     b.onclick = () => { setLang(b.dataset.lang); render(); };
@@ -866,7 +972,194 @@ function viewSettings() {
 }
 
 // ---------------------------------------------------------------------------
-const remoteKeys = () => Object.fromEntries(Object.entries(USERS).map(([k, v]) => [k, v.remoteKey]));
+// Administración. Solo la ve quien tiene is_admin en su fila. Es un control de
+// interfaz, no de seguridad: con la clave anon pública las políticas RLS no pueden
+// distinguir usuarios de todos modos (ver README).
+// ---------------------------------------------------------------------------
+function viewAdmin() {
+  app.innerHTML = `
+    ${header(t('adminTitle'), t('adminSub'), true)}
+    <div id="adm"><p class="muted">${t('adminLoading')}</p></div>`;
+  wireTabs('settings');
+
+  db.listUserRows().then((rows) => {
+    const box = document.getElementById('adm');
+    if (!box || state.view !== 'admin') return;
+    box.innerHTML = rows.map((r) => `
+      <div class="card">
+        <h2>${esc(r.name)}</h2>
+        <p class="muted" style="margin:3px 0 0">@${esc(r.username)}${r.is_admin ? ' · admin' : ''} ·
+          ${new Date(r.created_at).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+        <div class="btn-row" style="margin-top:12px">
+          <button class="btn" data-see="${esc(r.username)}">${t('adminView')}</button>
+          <button class="btn" data-edit="${esc(r.username)}">${t('adminEdit')}</button>
+          <button class="btn" data-pin="${esc(r.username)}">${t('adminPin')}</button>
+          ${r.username === db.getUser() ? '' : `<button class="btn" data-del="${esc(r.username)}">${t('adminDelete')}</button>`}
+        </div>
+      </div>`).join('');
+
+    const rowOf = (b) => rows.find((r) => r.username === b.dataset.see || r.username === b.dataset.edit || r.username === b.dataset.pin || r.username === b.dataset.del);
+
+    box.querySelectorAll('[data-see]').forEach((b) => {
+      b.onclick = () => {
+        const r = rowOf(b);
+        db.cacheAccount(r);
+        state.user = r.username;   // impersonación en memoria: al recargar vuelves a ser tú
+        state.view = 'home';
+        render();
+        db.pullFromCloud({ [r.username]: r.remote_key }).then((res) => {
+          if (res.ok && (res.sets || res.body) && state.user === r.username) render();
+        });
+      };
+    });
+
+    box.querySelectorAll('[data-edit]').forEach((b) => {
+      b.onclick = () => {
+        const r = rowOf(b);
+        db.cacheAccount(r);
+        state.editUser = r.username;
+        // Una rutina builtin se materializa a JSON con refs la primera vez que se edita
+        state.editDraft = r.routine?.builtin ? materialize(resolveRoutine(r)) : structuredClone(r.routine);
+        state.view = 'editRoutine';
+        render();
+      };
+    });
+
+    box.querySelectorAll('[data-pin]').forEach((b) => {
+      b.onclick = async () => {
+        const r = rowOf(b);
+        const pin = prompt(t('adminNewPin', r.name));
+        if (pin == null) return;
+        if (!validPin(pin)) { toast(t('suBadPin')); return; }
+        try {
+          await db.updateUserRow(r.username, { pin_hash: await hashPin(r.username, pin) });
+          toast(t('adminPinDone'));
+        } catch (e) { toast(t('errorPrefix', String(e.message || e))); }
+      };
+    });
+
+    box.querySelectorAll('[data-del]').forEach((b) => {
+      b.onclick = async () => {
+        const r = rowOf(b);
+        if (!confirm(t('adminConfirmDelete', r.name))) return;
+        try {
+          await db.deleteUserRow(r.username);
+          db.removeAccount(r.username);
+          toast(t('adminDeleted'));
+          render();
+        } catch (e) { toast(t('errorPrefix', String(e.message || e))); }
+      };
+    });
+  }).catch((e) => {
+    const box = document.getElementById('adm');
+    if (box) box.innerHTML = `<div class="note warn">${esc(t('errorPrefix', String(e.message || e)))}</div>`;
+  });
+}
+
+/** Lee los inputs del editor hacia el borrador antes de re-renderizar o guardar. */
+function captureEditor() {
+  const draft = state.editDraft;
+  app.querySelectorAll('.ed-ex').forEach((box) => {
+    const e = draft?.days[box.dataset.di]?.exercises[box.dataset.ei];
+    if (!e) return;
+    box.querySelectorAll('[data-f]').forEach((inp) => {
+      e[inp.dataset.f] = inp.value === '' ? null : Number(inp.value);
+    });
+  });
+}
+
+function viewRoutineEditor() {
+  const row = db.getAccount(state.editUser);
+  const draft = state.editDraft;
+  if (!row || !draft) { state.view = 'admin'; return render(); }
+
+  const edNum = (f, label, v) => `
+    <label style="display:block;font-size:11px;color:var(--fg-var)">${label}
+      <input type="number" step="any" data-f="${f}" value="${v ?? ''}" style="width:100%"></label>`;
+
+  const catalogo = Object.values(EXERCISES)
+    .map((e) => ({ key: e.key, nombre: exName(e) }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+  app.innerHTML = `
+    ${header(row.name, t('adminEditSub'), true)}
+    ${draft.days.map((d, di) => {
+      const base = DAYS[d.ref] || { key: d.ref, name: d.ref };
+      return `<div class="card">
+        <div class="kicker">${esc(d.weekday)}</div>
+        <h2>${esc(dayName(base))}</h2>
+        ${d.exercises.map((e, ei) => {
+          const cat = EXERCISES[e.ref] || { key: e.ref, name: e.ref };
+          return `<div class="ed-ex" data-di="${di}" data-ei="${ei}" style="border-top:0.5px solid var(--outline);padding:12px 0 2px;margin-top:12px">
+            <div class="row" style="align-items:center">
+              <strong style="min-width:0">${esc(exName(cat))}</strong>
+              <button class="btn" data-rm style="flex:0 0 auto">${t('edRemove')}</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px">
+              ${edNum('sets', t('colSets'), e.sets)}
+              ${edNum('repMin', t('edRepMin'), e.repMin)}
+              ${edNum('repMax', t('edRepMax'), e.repMax)}
+              ${edNum('rir', 'RIR', e.rir)}
+              ${edNum('restSec', t('edRest'), e.restSec)}
+              ${edNum('startLoad', t('colStart'), e.startLoad)}
+              ${edNum('increment', t('edIncr'), e.increment)}
+            </div>
+          </div>`;
+        }).join('')}
+        <select class="picker" data-add="${di}" style="margin-top:14px">
+          <option value="">${t('edAdd')}</option>
+          ${catalogo.map((c) => `<option value="${esc(c.key)}">${esc(c.nombre)}</option>`).join('')}
+        </select>
+      </div>`;
+    }).join('')}
+    <button class="btn primary wide" id="ed-save">${t('edSave')}</button>`;
+
+  app.querySelectorAll('[data-rm]').forEach((b) => {
+    b.onclick = () => {
+      captureEditor();
+      const box = b.closest('.ed-ex');
+      draft.days[box.dataset.di].exercises.splice(Number(box.dataset.ei), 1);
+      render();
+    };
+  });
+
+  app.querySelectorAll('[data-add]').forEach((s) => {
+    s.onchange = () => {
+      const cat = EXERCISES[s.value];
+      if (!cat) return;
+      captureEditor();
+      draft.days[s.dataset.add].exercises.push(exOverrides(cat));
+      render();
+    };
+  });
+
+  document.getElementById('ed-save').onclick = async () => {
+    captureEditor();
+    for (const d of draft.days) {
+      for (const e of d.exercises) {
+        const nums = [e.sets, e.repMin, e.repMax, e.rir, e.restSec, e.startLoad];
+        if (nums.some((v) => v == null || Number.isNaN(v)) || e.sets < 1 || e.repMin < 1 || e.repMax < e.repMin) {
+          toast(t('edBad')); return;
+        }
+      }
+    }
+    try {
+      await db.updateUserRow(state.editUser, { routine: draft });
+      db.cacheAccount({ ...row, routine: draft });
+      toast(t('adminSaved'));
+      state.view = 'admin';
+      render();
+    } catch (e) { toast(t('errorPrefix', String(e.message || e))); }
+  };
+
+  wireTabs('settings');
+  // El botón atrás del editor vuelve a la lista de usuarios, no al inicio
+  const back = document.getElementById('back');
+  if (back) back.onclick = () => { state.view = 'admin'; render(); };
+}
+
+// ---------------------------------------------------------------------------
+const remoteKeys = () => db.remoteKeys();
 
 async function sync(silent) {
   if (!db.isConfigured()) return { ok: false, error: 'sin-configurar' };
@@ -892,8 +1185,27 @@ async function syncBoth(silent) {
 // Solo en cambio de vista: al re-renderizar tras marcar una serie hay que quedarse donde estás.
 let lastView = null;
 function render() {
-  if (!state.user || !USERS[state.user]) return viewChooser();
-  ({ home: viewHome, day: viewDay, diet: viewDiet, progress: viewProgress, body: viewBody, settings: viewSettings }[state.view] || viewHome)();
+  // Sin sesión (o sin la fila de cuenta cacheada) no hay nada que entrenar: login.
+  if (!state.user || !db.getAccount(state.user)) {
+    return (state.view === 'signup' ? viewSignup : viewLogin)();
+  }
+  ({
+    home: viewHome, day: viewDay, diet: viewDiet, progress: viewProgress, body: viewBody,
+    settings: viewSettings, admin: viewAdmin, editRoutine: viewRoutineEditor,
+  }[state.view] || viewHome)();
+
+  // Banner fijo mientras el admin está viendo la cuenta de otra persona.
+  if (state.user !== db.getUser()) {
+    const { user } = ctx();
+    app.insertAdjacentHTML('afterbegin', `<div class="note warn" style="display:flex;align-items:center;gap:12px;justify-content:space-between">
+      <span><strong>${t('viewingAs', esc(user.name))}</strong></span>
+      <button class="btn" id="imp-exit" style="flex:0 0 auto">${t('viewingExit')}</button>
+    </div>`);
+    document.getElementById('imp-exit').onclick = () => {
+      state.user = db.getUser(); state.view = 'admin'; render();
+    };
+  }
+
   const viewId = `${state.view}:${state.dayKey || ''}`;
   if (viewId !== lastView) {
     lastView = viewId;
@@ -937,6 +1249,26 @@ document.addEventListener('gym:storage-error', () =>
   toast(t('storageError')));
 addEventListener('online', () => syncBoth(false));
 
+/**
+ * Refresco silencioso de la propia fila de cuenta: así una rutina editada por el
+ * admin llega al móvil del usuario en la siguiente apertura con red.
+ */
+async function refreshAccount() {
+  const u = db.getUser();
+  if (!u || !db.isConfigured() || !navigator.onLine) return;
+  try {
+    const row = await db.fetchUserRow(u);
+    if (!row) {
+      // La cuenta ya no existe (borrada por el admin): fuera de la sesión.
+      db.removeAccount(u); db.setUser(null); state.user = null;
+    } else {
+      db.cacheAccount(row);
+    }
+    render();
+  } catch { /* sin red: se reintenta en la próxima apertura */ }
+}
+
 render();
 syncBoth(false);
+refreshAccount();
 checkVersion();

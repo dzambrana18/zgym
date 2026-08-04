@@ -22,6 +22,7 @@ function authHeaders() {
 
 const K = {
   user: 'gym.user',
+  accounts: 'gym.accounts',
   sets: (u) => `gym.${u}.sets`,
   body: (u) => `gym.${u}.body`,
   meso: (u) => `gym.${u}.mesocycleStart`,
@@ -64,6 +65,68 @@ function uuid() {
 // --- usuario ---------------------------------------------------------------
 export const getUser = () => read(K.user, null);
 export const setUser = (u) => write(K.user, u);
+
+// --- cuentas (filas de la tabla `users` cacheadas para funcionar offline) ---
+// Guarda la cuenta propia y las que el admin haya abierto. La fila cacheada es
+// la rutina: sin ella la app no sabe qué entrenar, por eso el primer login
+// necesita red y los siguientes no.
+export const getAccounts = () => read(K.accounts, {});
+export const getAccount = (username) => getAccounts()[username] || null;
+export function cacheAccount(row) {
+  const all = getAccounts();
+  all[row.username] = row;
+  write(K.accounts, all);
+}
+export function removeAccount(username) {
+  const all = getAccounts();
+  delete all[username];
+  write(K.accounts, all);
+}
+
+/** user_key remoto de cada cuenta cacheada, para la cola de sincronización. */
+export const remoteKeys = () =>
+  Object.fromEntries(Object.values(getAccounts()).map((r) => [r.username, r.remote_key]));
+
+// --- tabla `users` en Supabase ----------------------------------------------
+async function usersFetch(path, opts = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/users${path}`, {
+    ...opts,
+    headers: { ...authHeaders(), 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  if (!res.ok) throw new Error(`users: HTTP ${res.status} ${await res.text()}`);
+  return res.status === 204 ? null : res.json();
+}
+
+export async function fetchUserRow(username) {
+  const rows = await usersFetch(`?username=eq.${encodeURIComponent(username)}&select=*`);
+  return rows[0] || null;
+}
+
+/** Alta. Si el username ya existe, PostgREST devuelve 409 y esto lanza. */
+export async function insertUserRow(row) {
+  await usersFetch('', {
+    method: 'POST',
+    headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify(row),
+  });
+}
+
+/** Actualización parcial: solo las columnas del patch (rutina, pin_hash...). */
+export async function updateUserRow(username, patch) {
+  await usersFetch(`?username=eq.${encodeURIComponent(username)}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function listUserRows() {
+  return usersFetch('?select=*&order=created_at.asc');
+}
+
+export async function deleteUserRow(username) {
+  await usersFetch(`?username=eq.${encodeURIComponent(username)}`, { method: 'DELETE' });
+}
 
 // --- mesociclo -------------------------------------------------------------
 export function getMesocycleStart(u) {
@@ -271,7 +334,10 @@ export async function pullFromCloud(remoteKeys) {
 
 // --- copia de seguridad manual --------------------------------------------
 export function exportAll() {
-  const users = ['anna', 'david'];
+  // Lista dinámica: cualquier usuario con datos guardados en este móvil entra en la copia.
+  const users = [...new Set(
+    Object.keys(localStorage).map((k) => /^gym\.(.+)\.(sets|body|mesocycleStart)$/.exec(k)?.[1]).filter(Boolean)
+  )];
   return {
     exportedAt: new Date().toISOString(),
     version: 1,

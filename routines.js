@@ -272,20 +272,36 @@ export const USERS = {
 
 const WEEKDAYS = { Domingo: 0, Lunes: 1, Martes: 2, Miércoles: 3, Jueves: 4, Viernes: 5, Sábado: 6 };
 
-export function findDay(userKey, dayKey) {
-  return USERS[userKey]?.days.find((d) => d.key === dayKey) || null;
+// ---------------------------------------------------------------------------
+// Catálogo derivado. Las rutinas generadas para usuarios nuevos no copian los
+// ejercicios: los REFERENCIAN por clave. Así fotos, dibujos SVG y las
+// traducciones (indexadas por esta misma clave) funcionan sin tocar nada.
+// ---------------------------------------------------------------------------
+export const EXERCISES = Object.fromEntries(
+  Object.values(USERS).flatMap((u) => u.days.flatMap((d) => d.exercises)).map((e) => [e.key, e])
+);
+export const DAYS = Object.fromEntries(
+  Object.values(USERS).flatMap((u) => u.days).map((d) => [d.key, d])
+);
+
+// Los helpers aceptan la clave de un usuario builtin ('anna') o directamente el
+// objeto de rutina ya resuelto (usuarios creados desde la app).
+const daysOf = (u) => (typeof u === 'string' ? USERS[u] : u)?.days || [];
+
+export function findDay(user, dayKey) {
+  return daysOf(user).find((d) => d.key === dayKey) || null;
 }
 
 export const weekdayIndex = (day) => WEEKDAYS[day.weekday] ?? -1;
 
 /** La sesión que toca hoy según el calendario del plan, o null si hoy es descanso. */
-export function todaysDay(userKey, date = new Date()) {
-  return (USERS[userKey]?.days || []).find((d) => weekdayIndex(d) === date.getDay()) || null;
+export function todaysDay(user, date = new Date()) {
+  return daysOf(user).find((d) => weekdayIndex(d) === date.getDay()) || null;
 }
 
 /** La siguiente sesión a partir de hoy, con cuántos días faltan. */
-export function nextDay(userKey, date = new Date()) {
-  const days = USERS[userKey]?.days || [];
+export function nextDay(user, date = new Date()) {
+  const days = daysOf(user);
   for (let i = 1; i <= 7; i++) {
     const wd = (date.getDay() + i) % 7;
     const d = days.find((x) => weekdayIndex(x) === wd);
@@ -294,8 +310,8 @@ export function nextDay(userKey, date = new Date()) {
   return null;
 }
 
-export function allExercises(userKey) {
-  return (USERS[userKey]?.days || []).flatMap((d) =>
+export function allExercises(user) {
+  return daysOf(user).flatMap((d) =>
     d.exercises.map((e) => ({ ...e, dayKey: d.key, dayName: d.name }))
   );
 }

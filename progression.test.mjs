@@ -175,6 +175,72 @@ for (const ex of todos) {
 const usados = new Set(todos.map((e) => e.pattern));
 assert.deepEqual(Object.keys(MOVES).filter((k) => !usados.has(k)), [], 'patrones de animación sin usar');
 
+// --- cuentas: plantillas, generador de rutina y calorías --------------------
+{
+  const { TEMPLATES, generateRoutine, calcTargets, resolveRoutine, materialize } = await import('./accounts.js');
+  const { DAYS } = await import('./routines.js');
+
+  // Toda ref de plantilla existe en el catálogo y sin días de la semana repetidos
+  for (const [n, dias] of Object.entries(TEMPLATES)) {
+    assert.equal(dias.length, Number(n), `plantilla ${n}: número de días`);
+    const wd = dias.map(([, w]) => w);
+    assert.equal(new Set(wd).size, wd.length, `plantilla ${n}: día de la semana repetido`);
+    for (const [ref] of dias) assert.ok(DAYS[ref], `plantilla ${n}: día desconocido ${ref}`);
+  }
+
+  // La rutina generada, una vez resuelta, pasa las mismas comprobaciones de forma
+  // que las rutinas escritas a mano
+  for (const daysPerWeek of [2, 3, 4, 5]) {
+    for (const experience of ['nuevo', 'avanzado']) {
+      const routine = generateRoutine({ daysPerWeek, experience, goal: 'musculo' });
+      const user = resolveRoutine({ name: 'Test', remote_key: 'test_000000', routine });
+      assert.equal(user.days.length, daysPerWeek, `${daysPerWeek}d: días generados`);
+      assert.equal(user.weekLabels.length, 5, `${daysPerWeek}d: etiquetas de semana`);
+      for (const d of user.days) {
+        assert.ok(d.name && d.warmup, `${daysPerWeek}d/${d.key}: al resolver faltan los textos del día`);
+        for (const ex of d.exercises) {
+          assert.ok(ex.name && ex.cue && ex.pattern && ex.video, `${daysPerWeek}d/${ex.key}: falta el contenido del catálogo`);
+          assert.ok(ex.rir >= 1 && ex.rir <= 4, `${daysPerWeek}d/${ex.key}: rir ${ex.rir}`);
+          assert.ok(ex.sets > 0 && ex.repMax >= ex.repMin, `${daysPerWeek}d/${ex.key}: series o reps inválidas`);
+          for (let w = 1; w <= 5; w++) assert.ok(suggest(ex, [], w).weight >= 0);
+        }
+      }
+    }
+  }
+
+  // Principiante: entrena más lejos del fallo que un avanzado con la misma plantilla
+  const nov = resolveRoutine({ routine: generateRoutine({ daysPerWeek: 3, experience: 'nuevo', goal: 'forma' }) });
+  const avz = resolveRoutine({ routine: generateRoutine({ daysPerWeek: 3, experience: 'avanzado', goal: 'forma' }) });
+  assert.ok(nov.days[0].exercises[0].rir > avz.days[0].exercises[0].rir, 'el principiante lleva RIR más alto');
+
+  // Una ref rota (edición mala del admin) se salta sin romper el resto
+  const roto = resolveRoutine({ routine: { days: [{ ref: 'a-torso-a', weekday: 'Lunes', exercises: [
+    { ref: 'no-existe' },
+    { ref: 'a-jalon-prono', sets: 4, repMin: 8, repMax: 10, rir: 2, restSec: 150, startLoad: 28, increment: 2.5 },
+  ] }] } });
+  assert.equal(roto.days[0].exercises.length, 1, 'la ref desconocida se salta');
+  assert.equal(roto.days[0].exercises[0].key, 'a-jalon-prono');
+
+  // materializar una builtin y resolverla devuelve la misma rutina
+  const annaBis = resolveRoutine({ name: 'Anna', remote_key: 'x', routine: materialize(USERS.anna) });
+  assert.deepEqual(
+    annaBis.days.flatMap((d) => d.exercises.map((e) => [e.key, e.sets, e.rir, e.startLoad, e.increment])),
+    USERS.anna.days.flatMap((d) => d.exercises.map((e) => [e.key, e.sets, e.rir, e.startLoad, e.increment])),
+    'materializar y resolver reproduce la rutina original');
+
+  // Calorías: Mifflin-St Jeor con factor de actividad y ajuste por objetivo
+  const d1 = calcTargets({ sex: 'm', age: 30, weightKg: 80, heightCm: 180, daysPerWeek: 4, goal: 'grasa' });
+  assert.ok(d1.kcal >= 2000 && d1.kcal <= 2400, `déficit hombre 80 kg: ${d1.kcal} kcal`);
+  assert.equal(d1.prot, 176, 'proteína a 2,2 g/kg en déficit');
+  const d2 = calcTargets({ sex: 'f', age: 25, weightKg: 55, heightCm: 165, daysPerWeek: 3, goal: 'musculo' });
+  assert.ok(d2.kcal > d2.prot * 4 + d2.fat * 9, 'las kcal cubren proteína y grasa');
+  assert.ok(d2.carb > 0 && d2.fat > 0 && d2.estrategia && d2.detalle && d2.proteinaNota);
+  assert.ok(d1.kcal < calcTargets({ sex: 'm', age: 30, weightKg: 80, heightCm: 180, daysPerWeek: 4, goal: 'musculo' }).kcal,
+    'perder grasa da menos kcal que ganar músculo');
+
+  console.log('   cuentas: plantillas, generador y calorías OK');
+}
+
 // --- idiomas ---------------------------------------------------------------
 // Los tres diccionarios tienen que cubrir exactamente lo mismo. Si no, la app
 // mezclaría idiomas: textos en español apareciendo dentro de la versión inglesa.
