@@ -8,6 +8,7 @@ export const CA = {
     loginUser: "Nom d'usuari",
     loginPin: 'PIN',
     loginBtn: 'Entrar',
+    loginShowPin: 'Veure el PIN',
     loginCreateTitle: 'Crear un compte nou',
     loginCreateSub: "Respon un qüestionari d'un minut i l'app et genera rutina i dieta.",
     loginNeedNet: 'El primer cop cal connexió',
@@ -91,6 +92,9 @@ export const CA = {
     yesterday: 'Ahir',
     daysAgo: 'Fa {0} dies',
     today: 'Avui',
+    weekKicker: 'Aquesta setmana',
+    weekLeft: 'en falta {0}',
+    weekAllDone: 'setmana completa',
     trackingKicker: 'Seguiment',
     bodyCard: 'Pes corporal i cintura',
 

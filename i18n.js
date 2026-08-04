@@ -92,6 +92,7 @@ export const UI_ES = {
   loginUser: 'Nombre de usuario',
   loginPin: 'PIN',
   loginBtn: 'Entrar',
+  loginShowPin: 'Ver el PIN',
   loginCreateTitle: 'Crear cuenta nueva',
   loginCreateSub: 'Responde un cuestionario de un minuto y la app te genera rutina y dieta.',
   loginNeedNet: 'La primera vez hace falta conexión',
@@ -178,6 +179,9 @@ export const UI_ES = {
   yesterday: 'Ayer',
   daysAgo: 'Hace {0} días',
   today: 'Hoy',
+  weekKicker: 'Esta semana',
+  weekLeft: 'falta {0}',
+  weekAllDone: 'semana completa',
   trackingKicker: 'Seguimiento',
   bodyCard: 'Peso corporal y cintura',
 

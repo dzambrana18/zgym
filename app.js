@@ -72,6 +72,10 @@ function tickRest() {
   document.getElementById('rest-label').textContent = rest.label;
   document.getElementById('rest-sub').textContent =
     left < 0 ? t('restDone') : t('restTarget', restLabel(rest.total));
+  // La pista se vacía con el tiempo restante: es el único movimiento continuo de la app
+  // y es información real, no decoración.
+  document.getElementById('rest-bar').style.width =
+    `${Math.max(0, Math.min(100, (left / rest.total) * 100))}%`;
   restEl.classList.toggle('over', left < 0);
   if (left === 0 && navigator.vibrate) navigator.vibrate([160, 90, 160]);
 }
@@ -106,26 +110,16 @@ function chart(series) {
        <text class="tx" x="0" y="${(py(y) + 3.5).toFixed(1)}">${axis(y)}</text>`)
     .join('');
 
-  // id único por gráfico: varios <svg> en la misma página no pueden compartir el id del degradado
-  const gid = 'g' + Math.random().toString(36).slice(2, 9);
-
+  // Solo trazo: el relleno de área bajo la línea tapaba la rejilla y no añadía dato.
   const lines = live.map((s, i) => {
     const pts = s.points.map((p) => `${px(p.x).toFixed(1)},${py(p.y).toFixed(1)}`).join(' ');
-    const dots = s.points.map((p) => `<circle class="${i ? 'dt2' : 'dt'}" cx="${px(p.x).toFixed(1)}" cy="${py(p.y).toFixed(1)}" r="2.6"/>`).join('');
-    // Relleno de área con degradado solo bajo la serie principal (Kinetic Noir)
-    const area = i === 0
-      ? `<polygon fill="url(#${gid})" points="${pts} ${(W - PR).toFixed(1)},${(H - PB).toFixed(1)} ${PL},${(H - PB).toFixed(1)}"/>`
-      : '';
-    return `${area}<polyline class="${i ? 'ln2' : 'ln'}" points="${pts}"/>${dots}`;
+    const dots = s.points.map((p) => `<circle class="${i ? 'dt2' : 'dt'}" cx="${px(p.x).toFixed(1)}" cy="${py(p.y).toFixed(1)}" r="2.4"/>`).join('');
+    return `<polyline class="${i ? 'ln2' : 'ln'}" points="${pts}"/>${dots}`;
   }).join('');
 
   const dl = new Date(minX).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
   const dr = new Date(maxX).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">
-    <defs><linearGradient id="${gid}" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0%" stop-color="#c3f400" stop-opacity="0.22"/>
-      <stop offset="100%" stop-color="#c3f400" stop-opacity="0"/>
-    </linearGradient></defs>
     ${grid}${lines}
     <text class="tx" x="${PL}" y="${H - 5}">${dl}</text>
     <text class="tx" x="${W - PR}" y="${H - 5}" text-anchor="end">${dr}</text>
@@ -145,11 +139,26 @@ function ctx() {
   return { u, user, start, week };
 }
 
-function dayProgress(u, day, week) {
-  const today = db.todayISO();
-  const sets = db.getSets(u).filter((s) => s.loggedAt === today && s.dayKey === day.key && s.reps > 0);
+/**
+ * Lunes de la semana en curso, en ISO. La rutina se organiza por día de la semana, así
+ * que la ventana natural para "¿esto ya está hecho?" es la semana de calendario.
+ */
+function weekStartISO() {
+  const d = new Date(`${db.todayISO()}T00:00:00`);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));   // getDay(): 0 = domingo
+  return db.todayISO(d);
+}
+
+/**
+ * Series registradas de una sesión desde `since` (fechas ISO, se comparan como texto).
+ * Por defecto mira solo hoy, que es lo que quiere la pantalla de la sesión abierta; la
+ * lista del inicio pasa el lunes, porque una sesión hecha ayer tiene que verse hecha.
+ */
+function dayProgress(u, day, week, since = db.todayISO()) {
+  const sets = db.getSets(u).filter((s) => s.loggedAt >= since && s.dayKey === day.key && s.reps > 0);
   const total = day.exercises.reduce((n, ex, i) => n + effectiveSets(ex, week, i === 0), 0);
-  return { done: sets.length, total };
+  // Repetir la misma sesión dos veces en la semana no puede dar más del 100 %.
+  return { done: Math.min(sets.length, total), total };
 }
 
 function lastDoneText(u, day) {
@@ -170,23 +179,44 @@ function viewLogin() {
   // se le precarga su usuario y solo tiene que poner el PIN una vez.
   const previo = db.getUser();
   app.innerHTML = `
-    <div class="chooser">
-      <div class="head">
-        <div class="kicker">${t('loginKicker')}</div>
-        <h1>${t('loginTitle')}</h1>
-      </div>
-      <div class="card">
-        <div class="field"><label for="lg-user">${t('loginUser')}</label>
-          <input id="lg-user" autocapitalize="none" autocomplete="username" value="${esc(previo || '')}"></div>
-        <div class="field"><label for="lg-pin">${t('loginPin')}</label>
-          <input id="lg-pin" type="password" autocomplete="current-password" maxlength="20"></div>
+    <div class="gate">
+      <img class="gate-img" src="./photos/barbell-squat-0.jpg" alt="" decoding="async">
+      <header class="gate-mark">
+        <h1>zgym</h1>
+        <p>${t('loginKicker')}</p>
+      </header>
+
+      <div class="gate-form">
+        <label class="fld">
+          <span class="fld-ic" aria-hidden="true">${ICONS.user}</span>
+          <input id="lg-user" placeholder="${t('loginUser')}" aria-label="${t('loginUser')}"
+            autocapitalize="none" autocomplete="username" value="${esc(previo || '')}">
+        </label>
+        <label class="fld">
+          <span class="fld-ic" aria-hidden="true">${ICONS.lock}</span>
+          <input id="lg-pin" type="password" placeholder="${t('loginPin')}" aria-label="${t('loginPin')}"
+            autocomplete="current-password" maxlength="20">
+          <button class="fld-eye" id="lg-eye" type="button" aria-label="${t('loginShowPin')}">${ICONS.eye}</button>
+        </label>
+
         <button class="btn primary wide" id="lg-go">${t('loginBtn')}</button>
+        <button class="gate-alt" id="lg-new">
+          <span>${t('loginCreateTitle')}</span>
+          <small>${t('loginCreateSub')}</small>
+        </button>
       </div>
-      <button class="card tap" id="lg-new">
-        <h2>${t('loginCreateTitle')}</h2>
-        <p class="muted" style="margin:8px 0 0">${t('loginCreateSub')}</p>
-      </button>
     </div>`;
+
+  // Ver el PIN: teclear a ciegas un PIN en un móvil, de pie en el gimnasio, es hostil.
+  const eye = document.getElementById('lg-eye');
+  eye.onclick = () => {
+    const inp = document.getElementById('lg-pin');
+    const ver = inp.type === 'password';
+    inp.type = ver ? 'text' : 'password';
+    eye.innerHTML = ver ? ICONS.eyeOff : ICONS.eye;
+    eye.classList.toggle('on', ver);
+    inp.focus();
+  };
   document.getElementById('lg-go').onclick = async () => {
     const btn = document.getElementById('lg-go');
     btn.disabled = true;
@@ -206,39 +236,41 @@ function viewSignup() {
   tabsEl.hidden = true;
   const sel = (id, label, opts) => `
     <div class="field"><label for="${id}">${label}</label>
-      <select id="${id}" class="picker" style="margin:0">${opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></div>`;
+      <select id="${id}" class="picker">${opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></div>`;
   const num = (id, label, min, max, ph = '') => `
     <div class="field"><label for="${id}">${label}</label>
       <input id="${id}" type="number" inputmode="numeric" min="${min}" max="${max}" placeholder="${ph}"></div>`;
 
   app.innerHTML = `
-    <div class="chooser">
-      <div class="head">
-        <div class="kicker">${t('loginKicker')}</div>
-        <h1>${t('suTitle')}</h1>
-      </div>
-      <div class="card">
-        <div class="kicker" style="margin-bottom:8px">${t('suAccessKicker')}</div>
-        <div class="field"><label for="su-name">${t('suName')}</label>
-          <input id="su-name" autocomplete="name" placeholder="John Smith"></div>
-        <div class="field"><label for="su-user">${t('loginUser')}</label>
-          <input id="su-user" autocapitalize="none" autocomplete="username" placeholder="johnsmith">
-          <p class="muted" style="margin:6px 0 0;font-size:12px">${t('suUserHint')}</p></div>
-        <div class="field"><label for="su-pin">${t('suPin')}</label>
-          <input id="su-pin" type="password" maxlength="20" autocomplete="new-password"></div>
-      </div>
-      <div class="card">
-        <div class="kicker" style="margin-bottom:8px">${t('suQuizKicker')}</div>
-        ${num('su-age', t('suAge'), 14, 90)}
-        ${sel('su-sex', t('suSex'), [['f', t('suSexF')], ['m', t('suSexM')]])}
-        ${num('su-weight', t('fieldWeight'), 30, 250)}
-        ${num('su-height', t('suHeight'), 120, 230)}
-        ${sel('su-exp', t('suExp'), [['nuevo', t('suExp0')], ['medio', t('suExp1')], ['avanzado', t('suExp2')]])}
-        ${sel('su-days', t('suDays'), [['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']])}
-        ${sel('su-goal', t('suGoal'), [['musculo', t('suGoalMuscle')], ['grasa', t('suGoalFat')], ['forma', t('suGoalFit')]])}
-        <button class="btn primary wide" id="su-go">${t('suCreate')}</button>
-      </div>
-      <button class="btn wide ghost" id="su-back">${t('back')}</button>
+    ${nav(t('suTitle'), t('suUserHint'))}
+
+    <div class="gate-form flow">
+      <label class="fld">
+        <span class="fld-ic" aria-hidden="true">${ICONS.user}</span>
+        <input id="su-name" autocomplete="name" placeholder="${t('suName')}" aria-label="${t('suName')}">
+      </label>
+      <label class="fld">
+        <span class="fld-ic mono" aria-hidden="true">@</span>
+        <input id="su-user" autocapitalize="none" autocomplete="username"
+          placeholder="${t('loginUser')}" aria-label="${t('loginUser')}">
+      </label>
+      <label class="fld">
+        <span class="fld-ic" aria-hidden="true">${ICONS.lock}</span>
+        <input id="su-pin" type="password" maxlength="20" autocomplete="new-password"
+          placeholder="${t('loginPin')}" aria-label="${t('suPin')}">
+      </label>
+    </div>
+
+    <div class="sec-title">${t('suQuizKicker')}</div>
+    <div class="sec">
+      ${num('su-age', t('suAge'), 14, 90)}
+      ${sel('su-sex', t('suSex'), [['f', t('suSexF')], ['m', t('suSexM')]])}
+      ${num('su-weight', t('fieldWeight'), 30, 250)}
+      ${num('su-height', t('suHeight'), 120, 230)}
+      ${sel('su-exp', t('suExp'), [['nuevo', t('suExp0')], ['medio', t('suExp1')], ['avanzado', t('suExp2')]])}
+      ${sel('su-days', t('suDays'), [['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']])}
+      ${sel('su-goal', t('suGoal'), [['musculo', t('suGoalMuscle')], ['grasa', t('suGoalFat')], ['forma', t('suGoalFit')]])}
+      <button class="btn primary wide" id="su-go" style="margin-top:10px">${t('suCreate')}</button>
     </div>`;
 
   const $ = (id) => document.getElementById(id);
@@ -267,86 +299,126 @@ function viewSignup() {
     render();
     sync(true);
   };
-  $('su-back').onclick = () => { state.view = 'home'; render(); };
+  document.getElementById('back').onclick = () => { state.view = 'home'; render(); };
 }
 
-/** Qué toca hoy según el calendario del plan. */
-function hoyBanner(u, user) {
+/**
+ * El bloque protagonista de Entreno: la sesión de hoy. Antes esto eran tres piezas
+ * compitiendo por el primer scroll (hero del mesociclo + aviso de hoy + lista de días);
+ * ahora manda lo único que se hace desde aquí, y el mesociclo baja a una tira de contexto.
+ */
+/** Primer ejercicio de la sesión que tenga foto: es la imagen que representa el día. */
+const dayPhoto = (day) => day.exercises.find((e) => e.photo)?.photo || null;
+
+function nowCard(u, user, week) {
   const hoy = todaysDay(user);
-  if (hoy) {
-    const p = dayProgress(u, hoy, mesocycleWeek(db.getMesocycleStart(u), db.todayISO()));
-    return `<div class="note today-note">
-      <strong>${t('todayIs', esc(dayName(hoy)))}</strong> — ${esc(daySubtitle(hoy))}.
-      ${p.done >= p.total && p.total > 0 ? t('todayDone') : ''}
+  if (!hoy) {
+    const sig = nextDay(user);
+    return `<div class="now rest">
+      <span class="now-lb">${t('today')}</span>
+      <div class="now-h"><h2>${esc(t('restDay'))}</h2></div>
+      <p>${sig
+        ? t('nextSession', esc(dayName(sig.day)), sig.enDias === 1 ? t('tomorrow') : t('inDays', sig.enDias)) + ' '
+        : ''}${t('restIsPlan')}</p>
     </div>`;
   }
-  const sig = nextDay(user);
-  return `<div class="note">
-    <strong>${t('restDay')}</strong> ${sig
-      ? t('nextSession', esc(dayName(sig.day)), sig.enDias === 1 ? t('tomorrow') : t('inDays', sig.enDias))
-      : ''} ${t('restIsPlan')}
-  </div>`;
+  const p = dayProgress(u, hoy, week);
+  const pct = p.total ? Math.round((p.done / p.total) * 100) : 0;
+  const hecha = p.total > 0 && p.done >= p.total;
+  const foto = dayPhoto(hoy);
+  // La foto va a sangre con un degradado encima: las fotos de técnica ya viajan con la
+  // app (photos/), así que no cuesta ni un byte de red ni rompe el modo offline.
+  return `<button class="now shot" data-day="${hoy.key}">
+    ${foto ? `<img class="now-img" src="./photos/${foto}-0.jpg" alt="" loading="eager" decoding="async">` : ''}
+    <span class="now-body">
+      <span class="now-lb">${t('today')} · ${esc(weekdayName(weekdayIndex(hoy)))}</span>
+      <span class="now-h">
+        <h2>${esc(dayName(hoy))}</h2>
+        <span class="chev" aria-hidden="true">${ICONS.chev}</span>
+      </span>
+      ${hecha ? `<span class="now-note">${esc(t('todayDone').trim())}</span>` : ''}
+      <span class="now-prog">
+        <span class="n">${p.done}/${p.total}</span>
+        <span class="now-track"><i style="width:${pct}%"></i></span>
+      </span>
+    </span>
+  </button>`;
 }
 
 function viewHome() {
   const { u, user, week } = ctx();
   const dl = isDeload(week);
   const hoy = todaysDay(user);
-  const body = db.getBody(u);
-  const lastBody = body.at(-1);
+  const lastBody = db.getBody(u).at(-1);
+  const lunes = weekStartISO();
+
+  // Progreso de cada sesión en la SEMANA en curso, no solo hoy: una sesión hecha ayer
+  // tiene que verse hecha, y así al final de semana se ve de un golpe qué falta.
+  const semana = user.days.map((d) => ({ d, p: dayProgress(u, d, week, lunes) }));
+  const entrenados = semana.filter((x) => x.p.done > 0).length;
+  const faltan = semana.length - entrenados;
 
   app.innerHTML = `
-    ${header(user.name, userSubtitle(u, user), false)}
-    <div class="week ${dl ? 'deload' : ''}">
-      <div class="row">
-        <div>
-          <div class="lbl">${t('mesoWeek')}</div>
-          <div class="big">${week} <span style="font-size:15px;opacity:.8">${t('mesoOf')}</span></div>
-        </div>
-        <div style="text-align:right">
-          <div class="lbl">${t('rirTarget')}</div>
-          <div class="big">${esc(user.weekLabels[week - 1])}</div>
-        </div>
+    ${lead(user.name, userSubtitle(u, user))}
+    ${nowCard(u, user, week)}
+
+    <div class="wk">
+      <div class="wk-top">
+        <span class="wk-lb">${t('weekKicker')}</span>
+        <span class="wk-n">${entrenados}<em>/${semana.length}</em> · ${faltan === 0 ? t('weekAllDone') : t('weekLeft', faltan)}</span>
       </div>
-      <div class="week-grid">${[1, 2, 3, 4, 5].map((w) => `<div class="week-dot ${w <= week ? 'on' : ''}"></div>`).join('')}</div>
-      <div class="hint">${dl ? t('hintDeload')
-        : week === 3 ? t('hintWeek3')
-        : week === 4 ? t('hintWeek4')
-        : t('hintDefault')}</div>
+      <div class="wk-days">
+        ${semana.map(({ d, p }) => {
+          const inicial = weekdayName(weekdayIndex(d)).slice(0, 2);
+          const hecho = p.done > 0;
+          return `<span class="wk-d ${hecho ? 'done' : ''} ${hoy?.key === d.key ? 'now' : ''}"
+            title="${esc(dayName(d))}">${hecho ? ICONS.check : esc(inicial)}</span>`;
+        }).join('')}
+      </div>
     </div>
 
-    ${hoyBanner(u, user)}
-
-    ${user.days.map((d) => {
-      const p = dayProgress(u, d, week);
-      const pct = p.total ? Math.round((p.done / p.total) * 100) : 0;
-      const esHoy = hoy?.key === d.key;
-      return `<button class="card tap ${esHoy ? 'today' : ''}" data-day="${d.key}">
-        <div class="row">
-          <div style="min-width:0">
-            <div class="kicker">${esc(weekdayName(weekdayIndex(d)))}${esHoy ? ` <span class="chip-hoy">${t('today')}</span>` : ''}</div>
-            <h2>${esc(dayName(d))}</h2>
-            <p class="muted" style="margin:3px 0 0">${esc(daySubtitle(d))}</p>
-          </div>
-          <div style="text-align:right;flex:0 0 auto">
-            <div class="muted" style="font-size:12px">${esc(lastDoneText(u, d))}</div>
-            <div class="n" style="font-size:19px;color:${pct ? 'var(--lime)' : 'var(--outline)'}">${p.done}/${p.total}</div>
-          </div>
-        </div>
-      </button>`;
-    }).join('')}
-
-    <button class="card tap" data-go="body">
-      <div class="row">
-        <div>
-          <div class="kicker">${t('trackingKicker')}</div>
-          <h2>${t('bodyCard')}</h2>
-        </div>
-        <div class="n" style="text-align:right;font-size:19px;color:var(--lime)">
-          ${lastBody?.weightKg ? fmt(lastBody.weightKg) + ' kg' : '—'}
-        </div>
+    <div class="meso ${dl ? 'deload' : ''}">
+      <div class="meso-row">
+        <span class="meso-rir">${t('mesoWeek')}</span>
+        <span class="meso-track" aria-hidden="true">${[1, 2, 3, 4, 5]
+          .map((w) => `<i class="meso-seg ${w < week ? 'done' : w === week ? 'cur' : ''}"></i>`).join('')}</span>
+        <span class="meso-n">${week}<em>/5</em></span>
       </div>
-    </button>`;
+      <p class="meso-hint">${dl ? t('hintDeload')
+        : week === 3 ? t('hintWeek3')
+        : week === 4 ? t('hintWeek4')
+        : t('hintDefault')} · RIR ${esc(user.weekLabels[week - 1])}</p>
+    </div>
+
+    <div class="list" style="margin-top:22px">
+      ${semana.map(({ d, p }) => {
+        const esHoy = hoy?.key === d.key;
+        const estado = p.done >= p.total ? 'on' : p.done > 0 ? 'part' : '';
+        return `<button class="row-i ${esHoy ? 'today' : ''}" data-day="${d.key}">
+          <span class="row-i-main">
+            <span class="kicker">${esc(weekdayName(weekdayIndex(d)))}${esHoy ? ` <em class="chip-hoy">${t('today')}</em>` : ''}</span>
+            <strong>${esc(dayName(d))}</strong>
+            <small>${esc(daySubtitle(d))}</small>
+          </span>
+          <span class="row-i-side">
+            <b class="n ${estado}">${p.done}/${p.total}</b>
+            <small>${esc(lastDoneText(u, d))}</small>
+          </span>
+          <span class="chev" aria-hidden="true">${ICONS.chev}</span>
+        </button>`;
+      }).join('')}
+    </div>
+
+    <div class="sec-title">${t('trackingKicker')}</div>
+    <div class="list">
+      <button class="row-i" data-go="body">
+        <span class="row-i-main">
+          <strong>${t('bodyCard')}</strong>
+          <small>${lastBody?.weightKg ? fmt(lastBody.weightKg) + ' kg' : t('neverLogged')}</small>
+        </span>
+        <span class="chev" aria-hidden="true">${ICONS.chev}</span>
+      </button>
+    </div>`;
 
   app.querySelectorAll('[data-day]').forEach((b) => {
     b.onclick = () => { state.dayKey = b.dataset.day; state.view = 'day'; state.open = null; state.override = {}; state.draft = {}; render(); };
@@ -355,11 +427,25 @@ function viewHome() {
   wireTabs('home');
 }
 
-function header(title, sub, back) {
-  return `<div class="top">
-    ${back ? `<button class="back" id="back">${t('back')}</button>` : ''}
-    <h1>${esc(title)}<span class="sub">${esc(sub)}</span></h1>
+/**
+ * Cabecera de pantalla raíz: título grande dentro del flujo, sin barra fija. Las cuatro
+ * pantallas de primer nivel no necesitan una barra pegajosa porque el dock siempre está
+ * ahí; quitarla devuelve media pantalla a la tipografía.
+ */
+function lead(title, sub) {
+  return `<div class="lead">
+    <h1>${esc(title)}</h1>
+    ${sub ? `<span class="sub">${esc(sub)}</span>` : ''}
   </div>`;
+}
+
+/** Cabecera de segundo nivel. Aquí sí es fija: es el único camino de vuelta. */
+function nav(title, meta) {
+  return `<div class="nav">
+      <button class="back" id="back" aria-label="${t('back')}">${ICONS.back}</button>
+      <h1>${esc(title)}</h1>
+    </div>
+    ${meta ? `<p class="meta">${esc(meta)}</p>` : ''}`;
 }
 
 // Iconos de la barra inferior. SVG en vez de glifos de texto: los símbolos tipográficos
@@ -379,6 +465,19 @@ const ICONS = {
   progress: svgIcon('<path d="M4 19.5h16"/><path d="M5 15.5l4.5-4.5 3 3L19 6.5"/><path d="M14.8 6.5H19v4.2"/>'),
   // controles deslizantes
   settings: svgIcon('<path d="M3.5 7.5h12.2M20.5 7.5h.2M8.2 16.5h12.3M3.5 16.5h.2"/><circle cx="18" cy="7.5" r="2.2"/><circle cx="6" cy="16.5" r="2.2"/>'),
+  // chevrones de la cabecera y de las filas navegables
+  back: svgIcon('<path d="M15 5l-7 7 7 7"/>'),
+  chev: svgIcon('<path d="M9 5l7 7-7 7"/>'),
+  check: svgIcon('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+  // iconos de los campos de acceso: son la etiqueta permanente del campo, así que el
+  // texto guía puede desaparecer al escribir sin que se pierda de qué campo se trata
+  user: svgIcon('<circle cx="12" cy="8" r="3.4"/><path d="M4.6 20c1.3-3.6 4-5.4 7.4-5.4s6.1 1.8 7.4 5.4"/>'),
+  lock: svgIcon('<rect x="4.5" y="10.4" width="15" height="9.6" rx="2.6"/><path d="M8.2 10.4V7.8a3.8 3.8 0 0 1 7.6 0v2.6"/>'),
+  eye: svgIcon('<path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.7"/>'),
+  eyeOff: svgIcon(`<path d="M4 4l16 16"/>
+     <path d="M9.7 6.9A9.8 9.8 0 0 1 12 6.5c6 0 9.5 5.5 9.5 5.5a17 17 0 0 1-2.9 3.4"/>
+     <path d="M6.5 8.6A17 17 0 0 0 2.5 12S6 17.5 12 17.5c.9 0 1.7-.1 2.4-.3"/>
+     <path d="M9.6 11.5a2.8 2.8 0 0 0 3.8 3.8"/>`),
 };
 
 // La barra se construye UNA vez y vive fuera de #app; en cada vista solo cambia
@@ -433,12 +532,12 @@ function viewDay() {
   </div>`;
 
   app.innerHTML = `
-    ${header(dayName(day), `${daySubtitle(day)} · ${t('mesoWeek')} ${week} · RIR ${user.weekLabels[week - 1]}`, true)}
+    ${nav(dayName(day), `${daySubtitle(day)} · ${t('mesoWeek')} ${week} · RIR ${user.weekLabels[week - 1]}`)}
     ${avisoDia}
     ${isDeload(week) ? `<div class="note warn"><strong>${t('deloadTitle')}</strong> ${t('deloadBody')}</div>` : ''}
     <div id="ex-list">${day.exercises.map((ex, i) => exerciseCard(u, day, ex, i, week, today)).join('')}</div>
-    <details class="card">
-      <summary style="font-weight:600;cursor:pointer">${t('warmup')}</summary>
+    <details class="blk">
+      <summary>${t('warmup')}</summary>
       <p class="cue">${esc(dayWarmup(day))}</p>
     </details>`;
 
@@ -491,25 +590,30 @@ function exerciseCard(u, day, ex, i, week, today) {
     </tr>`;
   }).join('');
 
-  return `<div class="card ${doneCount >= nSets ? 'is-done' : ''}" data-ex="${ex.key}">
+  return `<div class="ex ${doneCount >= nSets ? 'is-done' : ''}" data-ex="${ex.key}">
     <button class="ex-head" data-toggle="${ex.key}" aria-expanded="${isOpen}">
-      <span class="ex-idx">${i + 1}</span>
+      <span class="ex-thumb">
+        <span class="ex-idx">${String(i + 1).padStart(2, '0')}</span>
+        ${ex.photo ? `<img src="./photos/${ex.photo}-0.jpg" alt="" loading="lazy" decoding="async">` : ''}
+      </span>
       <span class="ex-name">${esc(exName(ex))}
         <span class="ex-spec">${nSets} × ${ex.timed ? `${ex.repMin}-${ex.repMax}″` : `${ex.repMin}-${ex.repMax}`} · RIR ${fmt(target)} · ${restLabel(ex.restSec)}</span>
       </span>
       <span class="ex-state ${doneCount >= nSets ? 'done' : ''}">${doneCount}/${nSets}</span>
     </button>
 
-    ${isOpen ? `
+    ${isOpen ? `<div class="ex-body">
       <div class="suggest">
-        <div class="n">${bw ? t('bodyweight') : `${fmt(w)} <small>${unitTxt}</small>`}</div>
-        <div class="why">${t(s.reasonKey, ...(s.reasonArgs || []))}</div>
-        ${s.last ? `<div class="last">${t('lastTime', esc(s.last))}</div>` : ''}
-        ${bw ? '' : `<div class="nudge">
-          <button data-nudge="-1" aria-label="Bajar peso">−</button>
-          <button data-nudge="1" aria-label="Subir peso">+</button>
-          <span class="muted" style="font-size:12px">${t('nudgeHint')}</span>
-        </div>`}
+        <div class="suggest-in">
+          <div class="load ${bw ? 'txt' : ''}">${bw ? t('bodyweight') : `${fmt(w)} <small>${unitTxt}</small>`}</div>
+          <div class="why">${t(s.reasonKey, ...(s.reasonArgs || []))}</div>
+          ${s.last ? `<div class="last">${t('lastTime', esc(s.last))}</div>` : ''}
+          ${bw ? '' : `<div class="nudge">
+            <button data-nudge="-1" aria-label="${t('colWeight')} −">−</button>
+            <button data-nudge="1" aria-label="${t('colWeight')} +">+</button>
+            <span>${t('nudgeHint')}</span>
+          </div>`}
+        </div>
       </div>
       <table class="sets">
         <thead><tr><th>#</th>${bw ? '' : `<th>${t('colWeight')}</th>`}<th>${ex.timed ? t('colSecs') : t('colReps')}</th><th>RIR</th><th></th></tr></thead>
@@ -517,12 +621,10 @@ function exerciseCard(u, day, ex, i, week, today) {
       </table>
       <div class="tech">
         ${tecnica(ex)}
-        <div class="tech-txt">
-          <p class="cue">${esc(exCue(ex))}</p>
-          <a class="vid" href="${videoUrl(ex)}" target="_blank" rel="noopener">${t('watchVideo')}</a>
-        </div>
+        <p class="cue">${esc(exCue(ex))}</p>
+        <a class="vid" href="${videoUrl(ex)}" target="_blank" rel="noopener">${t('watchVideo')}</a>
       </div>
-    ` : ''}
+    </div>` : ''}
   </div>`;
 }
 
@@ -619,13 +721,11 @@ function summarize(u, user) {
 function viewSummary(u, user) {
   const s = summarize(u, user);
   if (s.totalSesiones === 0) {
-    return `<div class="card"><div class="kicker">${t('summary')}</div>
-      <p class="muted" style="margin:8px 0 0">${t('summaryEmpty')}</p></div>`;
+    return `<div class="blk"><p class="muted">${t('summaryEmpty')}</p></div>`;
   }
   const li = (x) => `<li>${x}</li>`;
-  return `<div class="card">
-    <div class="kicker">${t('summary')}</div>
-    <div class="stats">
+  return `<div class="blk" style="padding-top:0">
+    <div class="dat">
       <div><span class="n">${s.recientes}</span><em>${t('statSessions')}</em></div>
       <div><span class="n">${s.subiendo.length}</span><em>${t('statRising')}</em></div>
       <div><span class="n ${s.parados.length ? 'warnv' : ''}">${s.parados.length}</span><em>${t('statStalled')}</em></div>
@@ -639,7 +739,7 @@ function viewSummary(u, user) {
       ${s.peso ? li(t('bodyWeightLine', fmt(Math.round(s.peso.actual * 10) / 10), (s.peso.delta >= 0 ? '+' : '') + fmt(Math.round(s.peso.delta * 10) / 10))) : ''}
       ${s.cintura != null ? li(t('waistLine', (s.cintura <= 0 ? '' : '+') + fmt(Math.round(s.cintura * 10) / 10))) : ''}
     </ul>
-    <p class="muted" style="margin:12px 0 0;font-size:13px">${t('summaryFoot')}</p>
+    <p class="muted" style="margin:16px 0 0;font-size:13px">${t('summaryFoot')}</p>
   </div>`;
 }
 
@@ -663,30 +763,31 @@ function viewProgress() {
   })).filter((p) => p.y > 0);
 
   app.innerHTML = `
-    ${header(t('tabProgress'), user.name, false)}
+    ${lead(t('tabProgress'), user.name)}
     ${viewSummary(u, user)}
+
+    <div class="sec-title">${t('e1rmKicker')}</div>
     <select class="picker" id="ex-pick">
       ${user.days.map((d) => `<optgroup label="${esc(dayName(d))}">
         ${d.exercises.map((e) => `<option value="${e.key}" ${e.key === key ? 'selected' : ''}>${esc(exName(e))}</option>`).join('')}
       </optgroup>`).join('')}
     </select>
 
-    <div class="card">
-      <div class="kicker">${t('e1rmKicker')}</div>
-      <h3>${esc(exName(ex))}</h3>
-      <p class="muted" style="margin:4px 0 0">${t('e1rmNote')}</p>
+    <div class="blk">
+      <h3 class="blk-t" style="margin-top:0">${esc(exName(ex))}</h3>
+      <p class="muted" style="margin:6px 0 0">${t('e1rmNote')}</p>
       ${chart([{ points }])}
     </div>
 
-    ${volume.length > 1 ? `<div class="card">
+    ${volume.length > 1 ? `<div class="blk">
       <div class="kicker">${t('tonnageKicker')}</div>
-      <p class="muted" style="margin:0">${t('tonnageNote')}</p>
+      <p class="muted" style="margin:6px 0 0">${t('tonnageNote')}</p>
       ${chart([{ points: volume }])}
     </div>` : ''}
 
-    <div class="card">
-      <div class="kicker">${t('history')}</div>
-      ${sessions.length === 0 ? `<p class="muted" style="margin:8px 0 0">${t('noHistory')}</p>` : `
+    <div class="sec-title">${t('history')}</div>
+    <div class="sec">
+      ${sessions.length === 0 ? `<p class="muted">${t('noHistory')}</p>` : `
       <table class="hist">
         <thead><tr><th>${t('colDate')}</th><th>${t('colSets')}</th><th>${t('colWeight')}</th><th>e1RM</th></tr></thead>
         <tbody>${sessions.slice().reverse().slice(0, 12).map((ses) => {
@@ -714,10 +815,10 @@ function viewBody() {
   const cPoints = rows.filter((r) => r.waistCm).map((r) => ({ x: Date.parse(r.loggedAt), y: r.waistCm }));
 
   app.innerHTML = `
-    ${header(t('bodyTitle'), user.name, true)}
+    ${nav(t('bodyTitle'), '')}
     <div class="note">${t('bodyNote')}</div>
 
-    <div class="card">
+    <div class="sec">
       <div class="field"><label for="bw">${t('fieldWeight')}</label>
         <input id="bw" type="number" inputmode="decimal" step="0.1" placeholder="${rows.at(-1)?.weightKg ?? ''}"></div>
       <div class="field"><label for="wc">${t('fieldWaist')}</label>
@@ -725,16 +826,16 @@ function viewBody() {
       <button class="btn primary wide" id="save-body">${t('saveToday')}</button>
     </div>
 
-    <div class="card">
-      <div class="kicker">${t('evolution')}</div>
+    <div class="sec-title">${t('evolution')}</div>
+    <div class="blk" style="padding-top:0">
       ${chart([{ points: wPoints }, { points: cPoints }])}
       <div class="legend">
-        <span><i class="swatch" style="background:var(--lime)"></i>${t('legendWeight')}</span>
-        <span><i class="swatch" style="background:var(--fg-var)"></i>${t('legendWaist')}</span>
+        <span><i class="swatch" style="background:var(--acc)"></i>${t('legendWeight')}</span>
+        <span><i class="swatch" style="background:var(--fg2)"></i>${t('legendWaist')}</span>
       </div>
     </div>
 
-    ${rows.length ? `<div class="card"><div class="kicker">${t('records')}</div>
+    ${rows.length ? `<div class="sec-title">${t('records')}</div>
       <table class="hist">
         <thead><tr><th>${t('colDate')}</th><th>${t('legendWeight')}</th><th>${t('legendWaist')}</th></tr></thead>
         <tbody>${rows.slice().reverse().slice(0, 14).map((r) => `<tr>
@@ -742,7 +843,7 @@ function viewBody() {
           <td>${r.weightKg ? fmt(r.weightKg) + ' kg' : '—'}</td>
           <td>${r.waistCm ? fmt(r.waistCm) + ' cm' : '—'}</td>
         </tr>`).join('')}</tbody>
-      </table></div>` : ''}`;
+      </table>` : ''}`;
 
   document.getElementById('save-body').onclick = () => {
     const w = document.getElementById('bw').value;
@@ -770,7 +871,7 @@ function viewDiet() {
   const mealCard = (m, slot, half) => {
     const abierto = state.meal === m.key;
     const f = half ? 0.5 : 1;
-    return `<div class="card meal ${abierto ? 'open' : ''}" data-meal="${m.key}">
+    return `<div class="meal ${abierto ? 'open' : ''}" data-meal="${m.key}">
       <button class="ex-head" data-openmeal="${m.key}" aria-expanded="${abierto}">
         <span class="ex-name">${slot ? `<span class="slot">${esc(slotName(slot))}</span>` : ''}${esc(mealName(m))}${half ? ` <em class="muted">${t('halfPortion')}</em>` : ''}
           <span class="ex-spec">${Math.round(m.kcal * f)} kcal · ${Math.round(m.prot * f)} ${t('gProtein')} · ${m.min} ${t('minShort')} · ≈${fmt(Math.round(m.price * f * 100) / 100)} €</span>
@@ -789,41 +890,39 @@ function viewDiet() {
   };
 
   app.innerHTML = `
-    ${header(t('dietTitle'), user.name, false)}
+    ${lead(t('dietTitle'), targetField(u, 'estrategia', tg.estrategia))}
 
-    <div class="week">
-      <div class="lbl">${esc(targetField(u, 'estrategia', tg.estrategia))}</div>
-      <div class="big">${tg.kcal} <span style="font-size:15px">${t('kcalDay')}</span></div>
-      <div class="macros">
-        <div><span class="n">${tg.prot}</span><em>${t('gProtein')}</em></div>
-        <div><span class="n">${tg.carb}</span><em>${t('gCarbs')}</em></div>
-        <div><span class="n">${tg.fat}</span><em>${t('gFat')}</em></div>
-      </div>
-      <div class="hint">${esc(targetField(u, 'detalle', tg.detalle))}</div>
+    <div class="figure">
+      <span class="big">${tg.kcal} <small>${t('kcalDay')}</small></span>
+      <p>${esc(targetField(u, 'detalle', tg.detalle))}</p>
+    </div>
+
+    <div class="dat">
+      <div><span class="n">${tg.prot}</span><em>${t('gProtein')}</em></div>
+      <div><span class="n">${tg.carb}</span><em>${t('gCarbs')}</em></div>
+      <div><span class="n">${tg.fat}</span><em>${t('gFat')}</em></div>
     </div>
 
     <div class="note"><strong>${t('proteinLabel')}</strong> ${esc(targetField(u, 'proteinaNota', tg.proteinaNota))}</div>
 
-    ${conEjemplo ? `<div class="card">
-      <div class="kicker">${t('sampleDay')}</div>
-      <p class="muted" style="margin:4px 0 0">${t('sampleSums', Math.round(tot.kcal), Math.round(tot.prot), fmt(Math.round(tot.price * 100) / 100))}
+    ${conEjemplo ? `
+    <div class="sec-title">${t('sampleDay')}</div>
+    <p class="muted">${t('sampleSums', Math.round(tot.kcal), Math.round(tot.prot), fmt(Math.round(tot.price * 100) / 100))}
       ${Math.abs(difKcal) <= 120 ? t('sampleFits')
         : difKcal > 0 ? t('sampleOver', difKcal) : t('sampleUnder', -difKcal)}</p>
+
+    <div class="list" style="margin-top:18px">
+      ${SAMPLE_DAY[u].map((it) => mealCard(mealByKey(it.key), it.slot, it.half)).join('')}
     </div>
 
-    ${SAMPLE_DAY[u].map((it) => mealCard(mealByKey(it.key), it.slot, it.half)).join('')}
+    <button class="btn wide" id="lista" style="margin-top:22px">${t('shoppingBtn')}</button>` : ''}
 
-    <div class="card">
-      <button class="btn wide" id="lista">${t('shoppingBtn')}</button>
-    </div>` : ''}
-
-    <div class="sec-title">${t('allRecipes')}</div>
     ${CATS.map(([c, label]) => `
-      <div class="kicker" style="margin:16px 0 8px">${t(label)}</div>
-      ${MEALS.filter((m) => m.cat === c).map((m) => mealCard(m, null, false)).join('')}
+      <div class="sec-title">${t(label)}</div>
+      <div class="list">${MEALS.filter((m) => m.cat === c).map((m) => mealCard(m, null, false)).join('')}</div>
     `).join('')}
 
-    <div class="note" style="margin-top:16px">${t('dietDisclaimer')}</div>`;
+    <div class="note">${t('dietDisclaimer')}</div>`;
 
   app.querySelectorAll('[data-openmeal]').forEach((b) => {
     b.onclick = () => { state.meal = state.meal === b.dataset.openmeal ? null : b.dataset.openmeal; render(); };
@@ -843,53 +942,74 @@ function viewSettings() {
   const last = db.getLastSync();
 
   app.innerHTML = `
-    ${header(t('settingsTitle'), user.name, false)}
+    ${lead(t('settingsTitle'), `@${u}`)}
 
-    <div class="card">
-      <div class="kicker">${t('language')}</div>
-      <div class="btn-row" style="margin-top:8px">
-        ${Object.entries(LANGS).map(([k, n]) =>
-          `<button class="btn ${getLang() === k ? 'primary' : ''}" data-lang="${k}">${n}</button>`).join('')}
+    <div class="sec-title">${t('language')}</div>
+    <div class="list">
+      <div class="row-i static">
+        <span class="row-i-main"><strong>${t('language')}</strong></span>
+        <span class="row-i-side seg" role="group">
+          ${Object.entries(LANGS).map(([k, n]) =>
+            `<button class="seg-btn ${getLang() === k ? 'on' : ''}" data-lang="${k}">${n}</button>`).join('')}
+        </span>
       </div>
     </div>
 
-    <div class="card">
-      <div class="kicker">${t('syncKicker')}</div>
-      <div class="sync" style="margin:6px 0 10px">
-        <span class="dot ${!db.isConfigured() ? '' : pend ? 'wait' : 'ok'}"></span>
-        ${!db.isConfigured() ? t('syncLocal')
-          : pend ? t('syncPending', pend) : t('syncOk')}
+    <div class="sec-title">${t('syncKicker')}</div>
+    <div class="list">
+      <div class="row-i static">
+        <span class="row-i-main">
+          <strong>${!db.isConfigured() ? t('syncLocal') : pend ? t('syncPending', pend) : t('syncOk')}</strong>
+          ${last ? `<small>${t('lastUpload', new Date(last).toLocaleString(locale()))}</small>` : ''}
+        </span>
+        <span class="sync-dot ${!db.isConfigured() ? '' : pend ? 'wait' : 'ok'}" aria-hidden="true"></span>
       </div>
-      ${last ? `<p class="muted" style="margin:0 0 10px">${t('lastUpload', new Date(last).toLocaleString(locale()))}</p>` : ''}
-      <div class="btn-row">
-        <button class="btn" id="do-sync" ${db.isConfigured() ? '' : 'disabled'}>${t('btnSync')}</button>
-        <button class="btn" id="do-pull" ${db.isConfigured() ? '' : 'disabled'}>${t('btnPull')}</button>
-        <button class="btn" id="do-export">${t('btnExport')}</button>
-        <button class="btn" id="do-import">${t('btnImport')}</button>
+      <button class="row-i" id="do-sync" ${db.isConfigured() ? '' : 'disabled'}>
+        <span class="row-i-main"><strong>${t('btnSync')}</strong></span>
+      </button>
+      <button class="row-i" id="do-pull" ${db.isConfigured() ? '' : 'disabled'}>
+        <span class="row-i-main"><strong>${t('btnPull')}</strong></span>
+      </button>
+      <button class="row-i" id="do-export">
+        <span class="row-i-main"><strong>${t('btnExport')}</strong></span>
+      </button>
+      <button class="row-i" id="do-import">
+        <span class="row-i-main"><strong>${t('btnImport')}</strong></span>
+      </button>
+    </div>
+    <input type="file" id="file" accept="application/json" hidden>
+    ${!db.isConfigured() ? `<div class="note warn">${t('noCloudWarn')}</div>` : ''}
+
+    <div class="sec-title">${t('mesoKicker')}</div>
+    <div class="list">
+      <div class="row-i static">
+        <span class="row-i-main">
+          <strong>${t('mesoState', week,
+            new Date(start).toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' }))}</strong>
+        </span>
       </div>
-      <input type="file" id="file" accept="application/json" hidden>
-      ${!db.isConfigured() ? `<div class="note warn" style="margin:12px 0 0">${t('noCloudWarn')}</div>` : ''}
+      <label class="row-i" for="meso">
+        <span class="row-i-main"><strong>${t('mesoStart')}</strong></span>
+        <input type="date" id="meso" value="${start}" class="date-in">
+      </label>
+      <button class="row-i" id="reset-meso">
+        <span class="row-i-main"><strong>${t('mesoReset')}</strong></span>
+      </button>
     </div>
 
-    <div class="card">
-      <div class="kicker">${t('mesoKicker')}</div>
-      <p class="muted" style="margin:4px 0 10px">${t('mesoState', week,
-        new Date(start).toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' }))}</p>
-      <div class="field"><label for="meso">${t('mesoStart')}</label>
-        <input id="meso" type="date" value="${start}"></div>
-      <button class="btn wide" id="reset-meso">${t('mesoReset')}</button>
-    </div>
-
-    ${db.getAccount(db.getUser())?.is_admin ? `<div class="card">
-      <div class="kicker">${t('adminKicker')}</div>
-      <p class="muted" style="margin:4px 0 10px">${t('adminSub')}</p>
-      <button class="btn wide" id="go-admin">${t('adminTitle')}</button>
+    ${db.getAccount(db.getUser())?.is_admin ? `<div class="sec-title">${t('adminKicker')}</div>
+    <div class="list">
+      <button class="row-i" id="go-admin">
+        <span class="row-i-main"><strong>${t('adminTitle')}</strong><small>${t('adminSub')}</small></span>
+        <span class="chev" aria-hidden="true">${ICONS.chev}</span>
+      </button>
     </div>` : ''}
 
-    <div class="card">
-      <div class="kicker">${t('account')}</div>
-      <p class="muted" style="margin:4px 0 10px">@${esc(u)}</p>
-      <button class="btn wide ghost" id="logout">${t('logout')}</button>
+    <div class="sec-title">${t('account')}</div>
+    <div class="list">
+      <button class="row-i" id="logout">
+        <span class="row-i-main"><strong>${t('logout')}</strong></span>
+      </button>
     </div>
 
     <div class="note">${t('timerNote')}</div>
@@ -960,8 +1080,8 @@ function viewSettings() {
     .then((d) => {
       const el = document.getElementById('ver-estado');
       if (!el) return;
-      if (d.version === VERSION) { el.textContent = t('verUpToDate'); el.style.color = 'var(--lime)'; }
-      else { el.textContent = t('verAvailable', d.version); el.style.color = 'var(--danger)'; }
+      if (d.version === VERSION) { el.textContent = t('verUpToDate'); el.style.color = 'var(--acc)'; }
+      else { el.textContent = t('verAvailable', d.version); el.style.color = 'var(--warn)'; }
     })
     .catch(() => {
       const el = document.getElementById('ver-estado');
@@ -978,19 +1098,19 @@ function viewSettings() {
 // ---------------------------------------------------------------------------
 function viewAdmin() {
   app.innerHTML = `
-    ${header(t('adminTitle'), t('adminSub'), true)}
-    <div id="adm"><p class="muted">${t('adminLoading')}</p></div>`;
+    ${nav(t('adminTitle'), t('adminSub'))}
+    <div id="adm"><p class="muted" style="padding-top:20px">${t('adminLoading')}</p></div>`;
   wireTabs('settings');
 
   db.listUserRows().then((rows) => {
     const box = document.getElementById('adm');
     if (!box || state.view !== 'admin') return;
     box.innerHTML = rows.map((r) => `
-      <div class="card">
-        <h2>${esc(r.name)}</h2>
-        <p class="muted" style="margin:3px 0 0">@${esc(r.username)}${r.is_admin ? ' · admin' : ''} ·
+      <div class="blk">
+        <h2 class="blk-t" style="margin-top:0">${esc(r.name)}</h2>
+        <p class="muted" style="margin:4px 0 0">@${esc(r.username)}${r.is_admin ? ' · admin' : ''} ·
           ${new Date(r.created_at).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-        <div class="btn-row" style="margin-top:12px">
+        <div class="btn-row" style="margin-top:16px">
           <button class="btn" data-see="${esc(r.username)}">${t('adminView')}</button>
           <button class="btn" data-edit="${esc(r.username)}">${t('adminEdit')}</button>
           <button class="btn" data-pin="${esc(r.username)}">${t('adminPin')}</button>
@@ -1074,28 +1194,27 @@ function viewRoutineEditor() {
   if (!row || !draft) { state.view = 'admin'; return render(); }
 
   const edNum = (f, label, v) => `
-    <label style="display:block;font-size:11px;color:var(--fg-var)">${label}
-      <input type="number" step="any" data-f="${f}" value="${v ?? ''}" style="width:100%"></label>`;
+    <label>${label}<input type="number" step="any" data-f="${f}" value="${v ?? ''}"></label>`;
 
   const catalogo = Object.values(EXERCISES)
     .map((e) => ({ key: e.key, nombre: exName(e) }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
   app.innerHTML = `
-    ${header(row.name, t('adminEditSub'), true)}
+    ${nav(row.name, t('adminEditSub'))}
     ${draft.days.map((d, di) => {
       const base = DAYS[d.ref] || { key: d.ref, name: d.ref };
-      return `<div class="card">
+      return `<div class="blk">
         <div class="kicker">${esc(d.weekday)}</div>
-        <h2>${esc(dayName(base))}</h2>
+        <h2 class="blk-t">${esc(dayName(base))}</h2>
         ${d.exercises.map((e, ei) => {
           const cat = EXERCISES[e.ref] || { key: e.ref, name: e.ref };
-          return `<div class="ed-ex" data-di="${di}" data-ei="${ei}" style="border-top:0.5px solid var(--outline);padding:12px 0 2px;margin-top:12px">
-            <div class="row" style="align-items:center">
+          return `<div class="ed-ex" data-di="${di}" data-ei="${ei}">
+            <div class="row">
               <strong style="min-width:0">${esc(exName(cat))}</strong>
-              <button class="btn" data-rm style="flex:0 0 auto">${t('edRemove')}</button>
+              <button class="btn sm" data-rm style="flex:0 0 auto">${t('edRemove')}</button>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px">
+            <div class="ed-grid">
               ${edNum('sets', t('colSets'), e.sets)}
               ${edNum('repMin', t('edRepMin'), e.repMin)}
               ${edNum('repMax', t('edRepMax'), e.repMax)}
@@ -1210,6 +1329,11 @@ function render() {
   if (viewId !== lastView) {
     lastView = viewId;
     window.scrollTo(0, 0);
+    // Entrada de pantalla. #app no se destruye entre vistas, así que hay que quitar la
+    // clase y forzar un reflow para que el navegador relance el keyframe.
+    app.classList.remove('in');
+    void app.offsetWidth;
+    app.classList.add('in');
   }
 }
 

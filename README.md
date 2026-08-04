@@ -42,10 +42,11 @@ Sitio estático: **sin framework, sin build, sin npm**. GitHub Pages lo sirve ta
 | Archivo | Qué hace |
 |---|---|
 | `index.html` | Shell y metadatos de PWA/iOS |
-| `styles.css` | Sistema de diseño **Kinetic Noir** (ver abajo) |
+| `styles.css` | Sistema de diseño **Halo** (ver abajo) |
 | `routines.js` | Solo datos: rutinas de anna/david/jan + catálogo `EXERCISES`/`DAYS` derivado |
 | `accounts.js` | Login con PIN, alta con cuestionario, generación de rutina/dieta, resolver de rutinas JSON |
 | `photos/` | 45 pares de fotos de técnica (inicio y final), 1,7 MB |
+| `make-icon.mjs` | Genera `icon-180.png` e `icon-512.png` (mancuerna en blanco roto sobre grafito). `node make-icon.mjs` |
 | `moves.js` | Dibujos SVG de respaldo, por si una foto no carga sin conexión |
 | `i18n.js`, `lang-ca.js`, `lang-en.js` | Español (base), catalán e inglés |
 | `nutrition.js` | Objetivos calóricos y las 20 recetas |
@@ -69,13 +70,32 @@ python -m http.server 8000    # servir en local
 
 ## Diseño
 
-Sigue `stitch_iron_flow_fitness.zip` (**Kinetic Noir**): negro puro, acento lima `#c3f400` usado con
-moderación, glassmorfismo con blur de 20-28 px, hairlines de 0,5 px, squircles de 24 px en tarjetas y
-8 px en controles, y monoespaciada tabular para todo dato numérico. Tema único oscuro.
+Sigue `DESIGN.md` (**Halo**, que sustituye a Onyx y a `stitch_iron_flow_fitness.zip`): negro frío
+`#08080a` tratado como material, con una luz ambiental fija arriba y una capa de grano finísimo
+para que el fondo tenga textura en vez de ser un vacío plano.
 
-**Tipografía:** el diseño pide Inter y JetBrains Mono, pero un `@import` de Google Fonts rompería el
-modo offline y añadiría una dependencia externa. Se usa la pila del sistema, así que **en iPhone salen
-SF Pro y SF Mono** — que es exactamente lo que Inter emula según el propio `DESIGN.md`.
+La jerarquía se construye con **luminancia**, no con color: blanco roto `#f4f4f6` para lo que
+importa, gris medio para lo que acompaña. El color aparece una sola vez, periwinkle `#7f8cf0`, y
+solo sobre datos: la línea del gráfico, la sesión de hoy, la pestaña activa, el foco y la serie
+confirmada. **La acción principal nunca es de color:** es una pastilla blanco roto con texto negro.
+
+**Casi nada vive dentro de una caja.** No hay tarjetas redondeadas apiladas: la estructura la hacen
+hairlines de 0,5 px a sangre, el aire y la tipografía. Solo se eleva una superficie cuando la
+elevación significa algo, y eso pasa en dos sitios: el lector de carga sugerida y el cristal fijo.
+
+El **cristal** (`backdrop-filter`) se reserva a los elementos fijos —barra de navegación, dock
+inferior flotante (solo iconos), barra de descanso y toast—, que es donde iOS lo compone sin
+repintar en cada scroll. Escala de formas única: píldora en controles, 13 px en inputs y
+miniaturas, 20 px en las superficies elevadas, 24 px en el dock. Monoespaciada tabular para todo
+dato numérico. Tema único oscuro.
+
+Las **fotos** son parte del sistema: los 45 pares de `photos/` se reutilizan como imagen de la
+sesión de hoy (a sangre, con la parte de arriba desvanecida por máscara) y como miniatura de cada
+ejercicio, siempre con el mismo tratamiento casi monocromo del token `--photo`. Al ir dentro del
+paquete no cuestan ni una petición de red ni rompen el modo offline.
+
+**Tipografía:** pila del sistema — **en iPhone salen SF Pro y SF Mono**. Un `@import` de Google
+Fonts rompería el modo offline, y SF Pro es lo que el diseño pide.
 
 ## Publicar en GitHub Pages
 
@@ -99,7 +119,7 @@ GitHub Pages reconstruye solo en 1-2 minutos.
 
 `version.json` es el único archivo que el service worker **nunca** cachea: se pide siempre a la
 red. Al abrir la app compara esa versión con la constante de `app.js`, que sí viaja dentro del
-paquete cacheado. Si no coinciden, ese móvil tiene una copia vieja y sale una barra lima arriba con
+paquete cacheado. Si no coinciden, ese móvil tiene una copia vieja y sale una barra blanca arriba con
 un botón **Actualizar** que borra las cachés, desregistra el service worker y recarga.
 
 En **Ajustes**, al pie, cada uno ve su versión instalada y si está al día. Si te dicen que algo no

@@ -1,47 +1,58 @@
 /* ===========================================================================
-   Kinetic Noir — sistema de diseño de stitch_iron_flow_fitness / DESIGN.md
-   True black + lima eléctrico, glassmorfismo, hairlines, squircles.
-   Tema único oscuro: el diseño se define por su arquitectura "True Black",
-   así que no hay variante clara.
+   Halo — sistema de diseño (ver DESIGN.md)
 
-   Tipografía: DESIGN.md pide Inter y JetBrains Mono, pero un @import de Google
-   Fonts rompería el modo offline (requisito de la app) y añadiría una
-   dependencia externa. Se usa la pila del sistema: en iPhone eso es SF Pro y
-   SF Mono, que es exactamente lo que Inter emula según el propio DESIGN.md.
+   Dos decisiones mandan sobre todo lo demás:
+
+   1. El negro es un material, no una ausencia. Una sola luz ambiental fija arriba
+      y una capa de grano finísimo, ambas fijas y sin eventos.
+   2. Casi nada vive dentro de una caja. La estructura la hacen hairlines a sangre,
+      el aire y la tipografía. Solo se eleva una superficie cuando la elevación
+      significa algo: la hoja de acceso, el lector de carga y el cristal fijo
+      (cabecera de navegación, dock, descanso, toast).
+
+   Tipografía: pila del sistema, para no romper el modo offline con Google Fonts.
    =========================================================================== */
 
 :root {
-  /* superficies (z-layers del design system) */
-  --l0: #000000;           /* fondo, profundidad infinita */
-  --l1: #121317;           /* surface */
-  --l2: #1a1b1f;           /* container-low */
-  --l3: #1e1f23;           /* container */
-  --l4: #292a2e;           /* container-high */
+  /* superficies */
+  --bg: #08080a;           /* canvas, negro frío (nunca #000) */
+  --s1: #101115;           /* la poca superficie que queda: lector, tiles, inputs */
+  --s2: #15161a;
+  --s3: #1e2026;           /* controles elevados, tick, lozenge de pestaña activa */
+  --glass: rgba(11, 12, 15, 0.6);
 
   /* texto */
-  --fg: #e3e2e7;
-  --fg-var: #cfc4c5;
-  --outline: #988e90;
-  --hair: rgba(255, 255, 255, 0.10);
-  --hair-soft: rgba(255, 255, 255, 0.06);
+  --fg: #f4f4f6;
+  --fg2: #9a9ba3;
+  --fg3: #62636b;
 
-  /* acento — usar con moderación, solo datos críticos y estados activos */
-  --lime: #c3f400;
-  --lime-dim: #abd600;
-  --on-lime: #161e00;
-  --glow: 0 0 20px rgba(195, 244, 0, 0.30);
-  --glow-soft: 0 0 12px rgba(195, 244, 0, 0.18);
+  /* estructura */
+  --hair: rgba(255, 255, 255, 0.1);
+  --hair2: rgba(255, 255, 255, 0.07);
+  --hl: rgba(255, 255, 255, 0.06);
 
-  --danger: #ffb4ab;
+  /* acento único — solo datos, estado activo y foco */
+  --acc: #7f8cf0;
+  --acc-dim: #5a64b8;
+  --acc-hair: rgba(127, 140, 240, 0.4);
 
-  /* glass y formas */
-  --glass: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
-  --r-ctl: 8px;            /* botones e inputs */
-  --r-card: 24px;          /* tarjetas y hojas */
-  --pad: 16px;             /* margen lateral móvil */
+  --warn: #ff9e8f;
 
-  --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  /* formas: una sola escala */
+  --r-pill: 999px;
+  --r-in: 14px;            /* inputs, campos y tiles internos */
+  --r-lift: 20px;          /* las pocas superficies elevadas */
+  --r-dock: 24px;
+  --pad: 20px;
+
+  /* Tratamiento único de foto: casi monocromo. Las fotos de gimnasio traen paredes rojas
+     y camisetas de colores que pelean con el negro frío; bajadas casi a blanco y negro,
+     el acento vuelve a ser el único color de la app. */
+  --photo: grayscale(0.94) contrast(1.12) brightness(0.9);
+
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --e: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -50,260 +61,553 @@
    sin esto, .rest (display:flex) se vería siempre pese al atributo hidden. */
 [hidden] { display: none !important; }
 
-html { background: var(--l0); }
+html { background: var(--bg); }
 
 body {
   margin: 0;
   font-family: var(--sans);
   font-size: 17px;                 /* mínimo iOS accesible; evita el zoom de Safari */
-  line-height: 22px;
-  letter-spacing: -0.001em;
+  line-height: 23px;
+  letter-spacing: -0.01em;
   color: var(--fg);
-  background: var(--l0);
+  background: var(--bg);
   padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
   overscroll-behavior-y: contain;
 }
 
-h1, h2, h3 { margin: 0; font-family: var(--sans); }
-button, input, select { font: inherit; color: inherit; font-family: var(--sans); }
-a { color: var(--lime); }
+/* Luz ambiental: una sola fuente, arriba y centrada. Sin ella el negro plano se lee
+   como un hueco. Capa fija, así no se repinta al hacer scroll. */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(130% 46% at 50% -10%, rgba(150, 162, 224, 0.13), transparent 64%);
+}
 
-/* Datos numéricos en monoespaciada tabular */
-.n, .big, .rest-time, .sets input, .hist td, .suggest .last, .chart .tx,
+/* Grano. El data-URI se decodifica una vez y se tesela: el filtro no se recalcula. */
+body::after {
+  content: ''; position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+h1, h2, h3, h4 { margin: 0; font-family: var(--sans); }
+button, input, select { font: inherit; color: inherit; font-family: var(--sans); }
+a { color: var(--acc); text-decoration: none; }
+::selection { background: var(--acc); color: var(--bg); }
+:focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; border-radius: 4px; }
+
+/* Todo dato numérico en mono tabular. Un número que cambia de ancho al teclearlo se
+   lee como un formulario; en ancho fijo se lee como un instrumento. */
+.n, .big, .rest-time, .sets input, .hist td, .load, .chart .tx, .meta, .dat .n,
 input[type="number"], input[type="date"] {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
 
-/* min-height con la altura dinámica del viewport: una pantalla con poco contenido
-   (Progreso sin registros) debe ocupar igualmente todo el alto, o en iOS la barra
-   inferior fija se descoloca. 100vh como respaldo para navegadores sin dvh. */
+/* El colchón inferior deja sitio al dock flotante. min-height dinámica para que una
+   pantalla corta siga ocupando el alto completo y el dock no se descoloque en iOS. */
 #app {
-  max-width: 720px; margin: 0 auto; padding: 0 var(--pad) 148px;
+  position: relative; z-index: 2;
+  max-width: 640px; margin: 0 auto; padding: 0 var(--pad) 132px;
   min-height: 100vh;
   min-height: 100dvh;
+  /* Las imágenes a sangre salen del margen con márgenes negativos y eso ensancha el
+     documento: scroll horizontal. `clip` lo corta sin crear un contenedor de scroll,
+     así que `position: sticky` de la barra de navegación sigue funcionando (`hidden` no). */
+  overflow-x: clip;
 }
 
-/* ---------- barra superior: glass fija ---------- */
-.top {
+/* Entrada de pantalla: un solo fade-up para todo #app, no una cascada por fila. La
+   vista se re-renderiza al guardar cada serie, y una cascada ahí sería un parpadeo. */
+@keyframes viewin { from { opacity: 0; transform: translate3d(0, 12px, 0); } }
+#app.in { animation: viewin 0.3s var(--e) both; }
+
+/* ---------- título grande, en el flujo ----------
+   Las cuatro pantallas raíz no llevan barra fija: la navegación es el dock, que
+   siempre está visible. Se gana la mitad superior de la pantalla para tipografía. */
+.lead { padding: 30px 0 24px; }
+.lead h1 {
+  font-size: 33px; line-height: 38px; font-weight: 600; letter-spacing: -0.035em;
+}
+.lead .sub {
+  display: block; margin-top: 8px;
+  font-size: 11px; line-height: 15px; font-weight: 600; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--fg3);
+}
+
+/* ---------- barra de navegación: solo en pantallas de segundo nivel ----------
+   Aquí sí hace falta fija: es el único camino de vuelta. */
+.nav {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; gap: 12px;
-  margin: 0 calc(var(--pad) * -1); padding: 14px var(--pad);
-  background: rgba(18, 19, 23, 0.72);
-  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid var(--hair);
-}
-.top h1 {
-  flex: 1; min-width: 0;
-  font-size: 22px; line-height: 26px; font-weight: 700; letter-spacing: -0.02em;
-}
-.top .sub {
-  display: block; margin-top: 2px;
-  font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.05em;
-  text-transform: uppercase; color: var(--outline);
+  margin: 0 calc(var(--pad) * -1); padding: 9px var(--pad);
+  background: var(--glass);
+  backdrop-filter: blur(30px) saturate(1.8); -webkit-backdrop-filter: blur(30px) saturate(1.8);
+  border-bottom: 0.5px solid var(--hair2);
 }
 .back {
-  background: none; border: 0; color: var(--lime); cursor: pointer;
-  font-size: 15px; font-weight: 600; padding: 8px 6px 8px 0;
+  flex: 0 0 34px; width: 34px; height: 34px; border-radius: var(--r-pill);
+  display: grid; place-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 0.5px solid var(--hair2);
+  color: var(--fg); cursor: pointer;
+  transition: transform 0.2s var(--e);
+}
+.back svg { display: block; width: 18px; height: 18px; }
+.back:active { transform: scale(0.9); }
+.nav h1 {
+  flex: 1; min-width: 0;
+  font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: -0.02em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* línea de contexto bajo la barra: mono, a sangre, sin caja */
+.meta {
+  padding: 16px 0 18px;
+  font-size: 12.5px; line-height: 18px; color: var(--fg3);
+  border-bottom: 0.5px solid var(--hair2);
 }
 
-/* ---------- tarjetas de cristal ---------- */
-.card {
-  background: var(--glass);
-  border: 0.5px solid var(--hair);
-  border-radius: var(--r-card);
-  padding: 20px;
-  margin-bottom: 12px;
-  overflow: hidden;          /* los hijos heredan el radio (integridad del squircle) */
-  /* hairline superior que "capta la luz" */
-  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.08);
+/* ---------- acceso ----------
+   Sin hoja ni tarjeta: logotipo arriba, formulario anclado abajo, en la zona del pulgar.
+   Los campos son líneas, no cajas: etiqueta en micro-caps y una hairline debajo que se
+   pinta de acento al enfocar. Es el mismo lenguaje que el resto de la app. */
+.gate {
+  position: relative;
+  min-height: calc(100dvh - 44px);
+  display: flex; flex-direction: column;
 }
-.card.tap {
+/* En el acceso no hay dock, así que el colchón que lo esquiva sobra: sin esto la
+   pantalla se queda con 132px de vacío muerto al final. */
+#app:has(.gate) { padding-bottom: 24px; }
+/* Foto a sangre en la mitad superior, desvanecida abajo. Es una de las fotos de técnica
+   que ya viajan con la app: cero peticiones de red y funciona sin conexión. */
+.gate-img {
+  position: absolute; top: 0; left: calc(var(--pad) * -1); right: calc(var(--pad) * -1);
+  height: 58%; width: auto; object-fit: cover; object-position: 50% 32%;
+  filter: var(--photo);
+  -webkit-mask-image: linear-gradient(180deg, #000 34%, transparent 96%);
+  mask-image: linear-gradient(180deg, #000 34%, transparent 96%);
+}
+.gate-mark { position: relative; margin-top: auto; }
+.gate-mark h1 {
+  font-size: 46px; line-height: 50px; font-weight: 600; letter-spacing: -0.06em;
+}
+.gate-mark p {
+  margin: 12px 0 0;
+  font-size: 11px; line-height: 15px; font-weight: 600; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--fg3);
+}
+.gate-form { position: relative; padding-top: 28px; }
+.gate-form.flow { padding-top: 8px; }
+
+/* Campo de acceso: caja con relleno propio, borde visible e icono a la izquierda.
+   Una hairline suelta no dice "escribe aquí"; el relleno y el borde sí. El icono es la
+   etiqueta permanente del campo, así que el texto guía puede irse al escribir sin que
+   se pierda de qué campo se trata. */
+.fld {
+  position: relative; display: flex; align-items: center; gap: 12px;
+  min-height: 58px; padding: 0 15px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 0.5px solid rgba(255, 255, 255, 0.13);
+  border-radius: var(--r-in);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: border-color 0.2s var(--e), background 0.2s var(--e);
+}
+.fld + .fld { margin-top: 10px; }
+.fld-ic {
+  flex: 0 0 20px; display: grid; place-items: center; color: var(--fg3);
+  transition: color 0.2s var(--e);
+}
+.fld-ic svg { display: block; width: 20px; height: 20px; }
+.fld-ic.mono { font-family: var(--mono); font-size: 17px; }
+.fld input {
+  flex: 1; min-width: 0; border: 0; background: none; color: var(--fg);
+  font-size: 16.5px; line-height: 24px; padding: 17px 0; letter-spacing: -0.015em;
+  caret-color: var(--acc);
+}
+.fld input:focus { outline: none; }
+.fld input::placeholder { color: var(--fg3); }
+.fld:focus-within {
+  border-color: var(--acc);
+  background: rgba(127, 140, 240, 0.07);
+}
+.fld:focus-within .fld-ic { color: var(--acc); }
+.fld-eye {
+  flex: 0 0 44px; width: 44px; height: 44px; margin-right: -9px;
+  border: 0; background: none; border-radius: var(--r-pill);
+  color: var(--fg3); display: grid; place-items: center; cursor: pointer;
+  transition: color 0.2s var(--e);
+}
+.fld-eye svg { display: block; width: 20px; height: 20px; }
+.fld-eye.on, .fld-eye:active { color: var(--fg); }
+
+.gate-form .btn.primary { margin-top: 22px; }
+.gate-alt {
+  display: block; width: 100%; margin-top: 14px; padding: 6px 12px;
+  background: none; border: 0; cursor: pointer; text-align: center;
+  min-height: 44px;
+}
+.gate-alt span {
+  display: block;
+  font-size: 15px; line-height: 20px; font-weight: 600; color: var(--fg);
+}
+.gate-alt small {
+  display: block; margin: 5px auto 0; max-width: 300px;
+  font-size: 12.5px; line-height: 17px; color: var(--fg3);
+}
+.gate-alt:active span { color: var(--acc); }
+
+/* ---------- sesión de hoy ----------
+   Foto real a sangre con el titular encima. Las fotos de técnica ya viajan dentro de la
+   app, así que la imagen no cuesta red ni rompe el offline. El texto se protege con un
+   degradado de negro, no bajando la opacidad de la foto: así la imagen sigue viéndose. */
+.now {
   display: block; width: 100%; text-align: left; cursor: pointer;
-  transition: transform 0.2s, border-color 0.2s;
+  background: none; border: 0; color: inherit;
+  padding: 4px 0 24px; margin: 0;
+  border-bottom: 0.5px solid var(--hair2);
+  transition: opacity 0.2s var(--e);
 }
-.card.tap:active { transform: scale(0.98); }
-.card.is-done { border-color: rgba(195, 244, 0, 0.35); }
+.now:active { opacity: 0.72; }
+.now.shot {
+  position: relative; overflow: hidden;
+  margin: 6px calc(var(--pad) * -1) 0;     /* a sangre: rompe el margen de #app */
+  padding: 0; border-bottom: 0;
+  min-height: 340px;
+  display: flex; align-items: flex-end;
+}
+.now-img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: 50% 30%;
+  filter: var(--photo);
+  /* el borde superior se desvanece: sin esto la imagen parece pegada, con una línea
+     recta cruzando la pantalla en vez de sangrar dentro del fondo */
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 22%);
+  mask-image: linear-gradient(180deg, transparent, #000 22%);
+}
+.now-body {
+  position: relative; z-index: 1; width: 100%;
+  padding: 90px var(--pad) 26px;
+  background: linear-gradient(180deg, transparent, rgba(8, 8, 10, 0.7) 40%, var(--bg) 84%, var(--bg));
+}
+.now-lb {
+  display: block;
+  font-size: 11px; line-height: 15px; font-weight: 600; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--acc);
+}
+.now.rest .now-lb { color: var(--fg3); }
+.now-h { display: flex; align-items: flex-start; gap: 12px; margin-top: 10px; }
+.now-h h2 {
+  flex: 1; min-width: 0;
+  font-size: 34px; line-height: 39px; font-weight: 600; letter-spacing: -0.04em;
+}
+.now-h .chev { margin-top: 9px; }
+.now-h .chev svg { width: 18px; height: 18px; }
+.now.rest h2 { font-size: 27px; line-height: 33px; }
+.now p, .now-note {
+  display: block; margin: 12px 0 0;
+  font-size: 15px; line-height: 21px; color: var(--fg2);
+}
+/* progreso de la sesión: cifra en mono + pista fina */
+.now-prog { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+.now-prog .n {
+  font-family: var(--mono); font-size: 13px; font-weight: 600;
+  color: var(--acc); letter-spacing: -0.02em;
+}
+.now-track {
+  flex: 1; height: 2px; border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.16); overflow: hidden;
+}
+.now-track i { display: block; height: 100%; background: var(--acc); }
 
-.kicker {
-  font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.05em;
-  text-transform: uppercase; color: var(--lime); margin-bottom: 6px;
+/* ---------- fila de datos: cifras grandes separadas por hairlines ----------
+   Sustituye a los tiles con borde. Los números son el dato; la caja no aportaba nada. */
+.dat {
+  display: flex;
+  border-bottom: 0.5px solid var(--hair2);
 }
-.card h2 { font-size: 20px; line-height: 25px; font-weight: 600; letter-spacing: -0.005em; }
-.card h3 { font-size: 17px; line-height: 22px; font-weight: 600; }
-.muted { color: var(--fg-var); font-size: 15px; line-height: 20px; }
+.dat > div { flex: 1; min-width: 0; padding: 18px 0 20px; }
+.dat > div + div { border-left: 0.5px solid var(--hair2); padding-left: 16px; }
+.dat .n {
+  display: block;
+  font-size: 27px; line-height: 31px; font-weight: 500; color: var(--fg);
+}
+.dat .n.on { color: var(--acc); }
+.dat .n.warnv { color: var(--warn); }
+.dat em {
+  display: block; font-style: normal; margin-top: 7px;
+  font-size: 11px; line-height: 15px; letter-spacing: 0.04em; color: var(--fg3);
+}
+
+/* ---------- semana: un círculo por sesión planificada ----------
+   Hecha = relleno de acento con tick. Pendiente = inicial del día en gris. De un golpe
+   se ve qué falta para cerrar la semana, que es la pregunta real del viernes. */
+.wk { padding: 22px 0 24px; border-bottom: 0.5px solid var(--hair2); }
+.wk-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.wk-lb {
+  font-size: 11px; line-height: 15px; font-weight: 600; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--fg3);
+}
+.wk-n { font-family: var(--mono); font-size: 12.5px; color: var(--fg2); letter-spacing: -0.02em; }
+.wk-n em { font-style: normal; color: var(--fg3); }
+.wk-days { display: flex; gap: 8px; margin-top: 16px; }
+.wk-d {
+  flex: 0 0 auto; width: 40px; height: 40px; border-radius: var(--r-pill);
+  display: grid; place-items: center;
+  border: 0.5px solid var(--hair);
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--fg3);
+}
+.wk-d.now { border-color: var(--acc-hair); color: var(--fg); }
+.wk-d.done { background: var(--acc); border-color: var(--acc); color: var(--bg); }
+.wk-d svg { display: block; width: 17px; height: 17px; }
+
+/* ---------- tira del mesociclo ---------- */
+.meso { padding: 18px 0 20px; border-bottom: 0.5px solid var(--hair2); }
+.meso-row { display: flex; align-items: center; gap: 14px; }
+.meso-n { flex: 0 0 auto; font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--fg); letter-spacing: -0.02em; }
+.meso-n em { font-style: normal; color: var(--fg3); }
+.meso-track { flex: 1; display: flex; gap: 4px; min-width: 60px; }
+.meso-seg { flex: 1; height: 2px; border-radius: var(--r-pill); background: rgba(255, 255, 255, 0.09); }
+.meso-seg.done { background: rgba(255, 255, 255, 0.45); }
+.meso-seg.cur { background: var(--acc); }
+.meso.deload .meso-seg.cur { background: var(--acc-dim); }
+.meso-rir {
+  flex: 0 0 auto;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--fg3);
+}
+.meso-hint { margin: 14px 0 0; font-size: 13.5px; line-height: 19px; color: var(--fg2); }
+
+/* ---------- número protagonista (objetivo de dieta) ---------- */
+.figure { padding: 6px 0 22px; }
+.figure .lbl {
+  display: block;
+  font-size: 11px; line-height: 15px; font-weight: 600; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--fg3);
+}
+.figure .big {
+  display: block; margin-top: 10px;
+  font-size: 56px; line-height: 58px; font-weight: 500; letter-spacing: -0.05em; color: var(--fg);
+}
+.figure .big small { font-family: var(--sans); font-size: 15px; font-weight: 600; color: var(--fg3); letter-spacing: 0; }
+.figure p { margin: 16px 0 0; font-size: 14.5px; line-height: 20px; color: var(--fg2); }
+
+/* ---------- listas a sangre: la estructura base de la app ----------
+   Sin contenedor, sin borde exterior, sin fondo. Solo hairlines entre filas. */
+.list { display: block; }
+.row-i {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  padding: 15px 0; text-align: left;
+  background: none; border: 0; color: var(--fg); cursor: pointer;
+  border-bottom: 0.5px solid var(--hair2);
+  transition: opacity 0.15s var(--e);
+}
+.row-i:active { opacity: 0.55; }
+.row-i.static { cursor: default; }
+.row-i.static:active { opacity: 1; }
+.row-i[disabled] { opacity: 0.35; cursor: default; }
+.row-i-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.row-i-main .kicker { margin: 0; font-size: 10px; letter-spacing: 0.07em; }
+.row-i.today .row-i-main .kicker { color: var(--acc); }
+.row-i-main strong {
+  font-size: 16.5px; line-height: 21px; font-weight: 600; letter-spacing: -0.02em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.row-i-main small {
+  font-size: 13px; line-height: 17px; color: var(--fg2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.row-i-side { flex: 0 0 auto; text-align: right; display: flex; flex-direction: column; gap: 3px; }
+.row-i-side .n { font-size: 15px; line-height: 19px; font-weight: 600; color: var(--fg3); }
+.row-i-side .n.part { color: var(--fg); }
+.row-i-side .n.on { color: var(--acc); }
+.row-i-side small { font-size: 11px; line-height: 14px; color: var(--fg3); }
+.chev { flex: 0 0 auto; color: var(--fg3); display: grid; place-items: center; }
+.chev svg { display: block; width: 15px; height: 15px; }
+
+.chip-hoy {
+  display: inline-block; margin-left: 7px; padding: 1px 6px; border-radius: var(--r-pill);
+  background: var(--acc); color: var(--bg); font-size: 9.5px; font-weight: 700;
+  letter-spacing: 0.05em; vertical-align: 1px; font-style: normal;
+}
+
+/* ---------- secciones ---------- */
+.sec { padding: 4px 0 6px; }
+.sec-title {
+  font-size: 11px; line-height: 15px; font-weight: 600; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--fg3);
+  padding: 30px 0 10px;
+}
+.kicker {
+  font-size: 11px; line-height: 15px; font-weight: 600; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--fg3);
+}
+h2.blk-t { font-size: 21px; line-height: 26px; font-weight: 600; letter-spacing: -0.03em; margin-top: 10px; }
+h3.blk-t { font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: -0.02em; margin-top: 8px; }
+.blk { padding: 22px 0 24px; border-bottom: 0.5px solid var(--hair2); }
+.blk:last-child { border-bottom: 0; }
+.muted { color: var(--fg2); font-size: 15px; line-height: 21px; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
-/* ---------- banda del mesociclo ---------- */
-.week {
-  background: var(--glass);
-  border: 0.5px solid var(--hair);
-  border-radius: var(--r-card);
-  padding: 20px; margin-bottom: 16px; overflow: hidden;
-  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.08);
-}
-.week .big {
-  font-family: var(--mono); font-size: 40px; line-height: 44px;
-  font-weight: 500; letter-spacing: -0.04em; color: var(--lime);
-}
-.week .big span { color: var(--outline); }
-.week .lbl {
-  font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.05em;
-  text-transform: uppercase; color: var(--outline);
-}
-.week.deload .big { color: var(--lime-dim); }
-.week.deload { border-color: rgba(171, 214, 0, 0.4); }
-.week .hint { color: var(--fg-var); font-size: 15px; line-height: 20px; margin-top: 12px; }
-
-/* Barra de progreso: pista de 4px con brillo interior */
-.week-grid { display: flex; gap: 4px; margin-top: 16px; }
-.week-dot { flex: 1; height: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.10); }
-.week-dot.on { background: var(--lime); box-shadow: var(--glow-soft); }
-
-/* ---------- "hoy toca" ---------- */
-.card.today { border-color: rgba(195, 244, 0, 0.45); box-shadow: inset 0 0 0 1px rgba(195, 244, 0, 0.12); }
-.chip-hoy {
-  display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
-  background: var(--lime); color: var(--on-lime); font-size: 10px; letter-spacing: 0.06em;
-}
-.note.today-note { border-left-color: var(--lime); }
-
-/* ---------- dieta ---------- */
-.macros { display: flex; gap: 8px; margin-top: 14px; }
-.macros > div {
-  flex: 1; background: rgba(255, 255, 255, 0.04); border-radius: 10px;
-  padding: 10px 6px; text-align: center;
-}
-.macros .n { display: block; font-size: 20px; line-height: 24px; color: var(--fg); }
-.macros em { display: block; font-style: normal; font-size: 10.5px; color: var(--outline); margin-top: 2px; }
-
-.sec-title {
-  font-family: var(--sans); font-size: 20px; font-weight: 600; letter-spacing: -0.005em;
-  margin: 26px 0 4px;
-}
-.card.meal { padding: 16px; }
-.card.meal.open { border-color: rgba(195, 244, 0, 0.35); }
-.meal .slot {
-  display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--lime); margin-bottom: 3px;
-}
-.meal .ex-state { font-size: 17px; width: 30px; text-align: center; padding: 2px 0; }
-.recipe { margin-top: 14px; border-top: 1px solid var(--hair-soft); padding-top: 14px; }
-.recipe h4 {
-  font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
-  color: var(--outline); margin: 0 0 6px;
-}
-.recipe h4 + ul, .recipe h4 + ol { margin: 0 0 14px; padding-left: 18px; }
-.recipe li { font-size: 15px; line-height: 21px; color: var(--fg-var); margin-bottom: 4px; }
-.recipe li::marker { color: var(--lime); }
-.recipe .tip {
-  margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--l2);
-  border-left: 2px solid var(--lime); font-size: 14px; line-height: 19px; color: var(--fg-var);
-}
-
-/* ---------- botones ---------- */
+/* ---------- botones ----------
+   El primario es blanco roto con texto negro: en iOS es el gesto que lee como
+   "esta es la acción". El acento no se gasta en botones. */
 .btn {
-  border: 1px solid var(--hair); background: transparent; color: var(--fg);
-  border-radius: var(--r-ctl); padding: 12px 16px; font-size: 15px; font-weight: 600;
-  cursor: pointer; min-height: 44px;
-  transition: transform 0.2s, opacity 0.2s;
+  border: 0.5px solid var(--hair); background: rgba(255, 255, 255, 0.07); color: var(--fg);
+  border-radius: var(--r-pill); padding: 12px 20px; font-size: 15px; font-weight: 600;
+  cursor: pointer; min-height: 46px;
+  transition: transform 0.2s var(--e), opacity 0.2s var(--e);
 }
-.btn:active { transform: scale(0.96); }
-.btn.primary {
-  background: var(--lime); border-color: var(--lime); color: var(--on-lime);
-  box-shadow: var(--glow); border-radius: 999px; font-weight: 700;
-}
+.btn:active { transform: scale(0.97); }
+.btn.primary { background: var(--fg); border-color: var(--fg); color: var(--bg); }
 .btn.ghost { background: transparent; }
 .btn.wide { width: 100%; }
-.btn[disabled] { opacity: 0.4; box-shadow: none; }
+.btn.sm { padding: 8px 14px; min-height: 36px; font-size: 13px; }
+.btn[disabled] { opacity: 0.4; }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* ---------- ejercicio ---------- */
+/* segmentado para elegir idioma */
+.seg {
+  display: inline-flex; gap: 3px; padding: 3px;
+  background: rgba(255, 255, 255, 0.06); border: 0.5px solid var(--hair2); border-radius: var(--r-pill);
+}
+.row-i-side.seg { flex-direction: row; }
+.seg-btn {
+  border: 0; background: none; color: var(--fg2); cursor: pointer;
+  font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: var(--r-pill); min-height: 30px;
+  transition: color 0.2s var(--e), background 0.2s var(--e);
+}
+.seg-btn.on { background: var(--fg); color: var(--bg); }
+
+/* punto de estado de sincronización: estado real, no decoración */
+.sync-dot { flex: 0 0 8px; width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--fg3); }
+.sync-dot.ok { background: var(--acc); }
+.sync-dot.wait { background: var(--warn); }
+
+.date-in {
+  border: 0.5px solid var(--hair2); background: rgba(255, 255, 255, 0.06); color: var(--fg);
+  border-radius: var(--r-in); padding: 9px 12px; font-size: 14px;
+  min-height: 40px; caret-color: var(--acc);
+}
+
+/* ---------- ejercicio: fila a sangre, no tarjeta ---------- */
+.ex { border-bottom: 0.5px solid var(--hair2); }
 .ex-head {
-  display: flex; align-items: flex-start; gap: 12px; width: 100%;
-  text-align: left; background: none; border: 0; padding: 0; cursor: pointer;
+  display: flex; align-items: flex-start; gap: 14px; width: 100%;
+  padding: 17px 0; text-align: left;
+  background: none; border: 0; color: inherit; cursor: pointer;
+  transition: opacity 0.15s var(--e);
+}
+.ex-head:active { opacity: 0.55; }
+/* Miniatura de la técnica. El número va DEBAJO de la imagen: si la foto no carga
+   (sin conexión y aún sin cachear) queda el índice a la vista, sin necesidad de JS. */
+.ex-thumb {
+  position: relative; flex: 0 0 58px; width: 58px; height: 48px;
+  border-radius: 12px; overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border: 0.5px solid var(--hair2);
+}
+/* Las fotos son planos generales de gimnasio: recortadas en cuadrado el sujeto se
+   pierde, así que la miniatura es rectangular y encuadra algo por encima del centro. */
+.ex-thumb img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: 50% 38%;
+  filter: var(--photo);
 }
 .ex-idx {
-  flex: 0 0 28px; height: 28px; border-radius: 999px;
-  border: 1px solid var(--hair); background: var(--l3);
-  color: var(--fg-var); font-family: var(--mono); font-size: 13px; font-weight: 500;
-  display: grid; place-items: center;
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--fg3);
+  letter-spacing: -0.02em;
 }
-.card.is-done .ex-idx { background: var(--lime); border-color: var(--lime); color: var(--on-lime); }
-.ex-name { flex: 1; min-width: 0; font-size: 17px; line-height: 22px; font-weight: 600; }
+.ex.is-done .ex-thumb { border-color: var(--acc-hair); }
+.ex.is-done .ex-thumb img { filter: var(--photo) brightness(0.6); }
+.ex-name { flex: 1; min-width: 0; font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: -0.02em; }
 .ex-spec {
-  display: block; margin-top: 4px;
-  font-family: var(--mono); font-size: 13px; line-height: 18px; font-weight: 500;
-  color: var(--outline); letter-spacing: -0.02em;
+  display: block; margin-top: 5px;
+  font-family: var(--mono); font-size: 12.5px; line-height: 17px; font-weight: 500;
+  color: var(--fg3); letter-spacing: -0.02em;
 }
-/* chip de estado, píldora con glow cuando está completo */
 .ex-state {
-  flex: 0 0 auto; font-family: var(--mono); font-size: 13px; font-weight: 500;
-  color: var(--outline); border: 1px solid var(--hair); border-radius: 999px;
-  padding: 3px 9px;
+  flex: 0 0 auto; padding-top: 2px;
+  font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--fg3);
+  letter-spacing: -0.02em;
 }
-.ex-state.done { color: var(--lime); border-color: rgba(195, 244, 0, 0.5); box-shadow: var(--glow-soft); }
+.ex-state.done { color: var(--acc); }
+.ex-body { padding-bottom: 22px; }
 
-/* ---------- sugerencia de carga ---------- */
+/* ---------- lector de carga: la única superficie elevada del entreno ----------
+   Aquí la elevación sí significa algo: es el dato que se mira entre series. */
 .suggest {
-  background: var(--l2); border: 0.5px solid var(--hair);
-  border-radius: 12px; padding: 16px; margin: 16px 0;
+  margin: 2px 0 20px;
+  padding: 5px;
+  border-radius: var(--r-lift);
+  background: rgba(255, 255, 255, 0.035);
+  border: 0.5px solid var(--hair2);
 }
-.suggest .n {
-  font-size: 40px; line-height: 44px; font-weight: 500;
-  letter-spacing: -0.04em; color: var(--lime);
+.suggest-in {
+  padding: 17px;
+  border-radius: 15px;                        /* 20px de la cáscara - 5px de padding */
+  background: linear-gradient(180deg, #16171c, #101116);
+  border: 0.5px solid var(--hair);
+  box-shadow: inset 0 1px 0 var(--hl);
 }
-.suggest .n small { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--outline); letter-spacing: 0; }
-.suggest .why { font-size: 15px; line-height: 20px; color: var(--fg-var); margin-top: 6px; }
-.suggest .last { font-size: 13px; line-height: 18px; color: var(--outline); margin-top: 8px; }
-.nudge { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+.load { font-size: 40px; line-height: 43px; font-weight: 500; letter-spacing: -0.05em; color: var(--fg); }
+.load small { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--fg3); letter-spacing: 0; }
+/* Los ejercicios de peso corporal no tienen cifra: en mono a 40px se leería como una
+   consola, así que ese caso va en la pila de texto y más pequeño. */
+.load.txt { font-family: var(--sans); font-size: 25px; line-height: 30px; font-weight: 600; letter-spacing: -0.03em; }
+.suggest .why { font-size: 14.5px; line-height: 20px; color: var(--fg2); margin-top: 9px; }
+.suggest .last { font-family: var(--mono); font-size: 12.5px; line-height: 17px; color: var(--fg3); margin-top: 9px; letter-spacing: -0.02em; }
+.nudge { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
 .nudge button {
-  width: 44px; height: 44px; border-radius: var(--r-ctl);
-  border: 1px solid var(--hair); background: var(--l3); color: var(--fg);
-  font-size: 20px; font-weight: 600; cursor: pointer;
+  width: 44px; height: 44px; border-radius: var(--r-pill);
+  border: 0.5px solid var(--hair); background: var(--s3); color: var(--fg);
+  font-size: 20px; font-weight: 500; cursor: pointer;
+  transition: transform 0.15s var(--e);
 }
-.nudge button:active { border-color: var(--lime); }
-.nudge span { font-size: 13px; color: var(--outline); }
+.nudge button:active { transform: scale(0.9); }
+.nudge span { font-size: 12.5px; line-height: 17px; color: var(--fg3); }
 
 /* ---------- tabla de series ---------- */
 .sets { width: 100%; border-collapse: collapse; }
 .sets th {
-  font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.05em;
-  text-transform: uppercase; color: var(--outline); text-align: center; padding-bottom: 8px;
+  font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--fg3); text-align: center; padding-bottom: 9px;
 }
 .sets th:first-child { text-align: left; }
-/* separadores tipo iOS: no llegan al borde */
-.sets td { padding: 5px 3px; border-top: 1px solid var(--hair-soft); }
-.sets tr:first-child td { border-top: 0; }
-.sets td:first-child { width: 30px; font-family: var(--mono); font-size: 13px; color: var(--outline); }
+.sets td { padding: 4px 3px; }
+.sets td:first-child { width: 22px; font-family: var(--mono); font-size: 13px; color: var(--fg3); }
+/* RIR con ancho fijo: repartido a partes iguales con peso y reps queda un campo de un
+   dígito tan estrecho que parece roto. El tick es la última celda. */
+.sets td:nth-last-child(2) { width: 62px; }
 .sets input {
   width: 100%; min-width: 0; text-align: center; padding: 11px 2px;
-  border: 1px solid var(--hair); border-radius: var(--r-ctl);
-  background: var(--l3); color: var(--fg); font-size: 16px; min-height: 44px;
+  border: 0.5px solid var(--hair2); border-radius: var(--r-in);
+  background: rgba(255, 255, 255, 0.05); color: var(--fg); font-size: 16px; min-height: 46px;
+  transition: border-color 0.2s var(--e);
 }
-.sets input::placeholder { color: #5c5c60; }
-.sets input:focus { outline: none; border-color: var(--lime); }
-.sets tr.done input { border-color: rgba(195, 244, 0, 0.28); color: var(--lime); }
+.sets input::placeholder { color: var(--fg3); opacity: 0.7; }
+.sets input:focus { outline: none; border-color: var(--acc); }
+.sets tr.done input { border-color: var(--acc-hair); color: var(--acc); }
 .tick {
-  width: 44px; height: 44px; border-radius: var(--r-ctl);
-  border: 1px solid var(--hair); background: var(--l3); color: var(--outline);
-  font-size: 17px; cursor: pointer; transition: transform 0.15s;
+  width: 44px; height: 44px; border-radius: var(--r-pill);
+  border: 0.5px solid var(--hair2); background: rgba(255, 255, 255, 0.05); color: var(--fg2);
+  font-size: 16px; cursor: pointer; transition: transform 0.15s var(--e);
 }
-.tick:active { transform: scale(0.92); }
-.tick.on { background: var(--lime); border-color: var(--lime); color: var(--on-lime); box-shadow: var(--glow); }
+.tick:active { transform: scale(0.9); }
+.tick.on { background: var(--acc); border-color: var(--acc); color: var(--bg); }
 
-/* ---------- animación de técnica ---------- */
-.tech { margin-top: 16px; }
-/* Cuadrado centrado: el viewBox es 1:1, así que una banda ancha dejaría mucho negro muerto. */
+/* ---------- técnica ---------- */
+.tech { margin-top: 20px; }
+/* Cuadrado centrado: el viewBox es 1:1, una banda ancha dejaría mucho negro muerto. */
 .move {
-  display: block; width: 100%; max-width: 200px; aspect-ratio: 1 / 1; height: auto;
-  border: 0.5px solid var(--hair); border-radius: 12px;
-  background: var(--l1); color: var(--lime); padding: 10px; margin: 0 auto 14px;
+  display: block; width: 100%; max-width: 190px; aspect-ratio: 1 / 1; height: auto;
+  border: 0.5px solid var(--hair2); border-radius: var(--r-in);
+  background: rgba(255, 255, 255, 0.04); color: var(--fg2); padding: 10px; margin: 0 auto 16px;
 }
-/* Dos posiciones que se alternan con corte limpio: un GIF de 2 fotogramas. */
+/* Dos posiciones alternándose con corte limpio: un GIF de dos fotogramas. */
 .mv-a, .mv-b { animation: mvflip 1.8s steps(1, end) infinite; }
 .mv-b { animation-delay: 0.9s; }
 @keyframes mvflip { 0% { opacity: 1; } 50%, 100% { opacity: 0; } }
@@ -311,12 +615,13 @@ input[type="number"], input[type="date"] {
 
 /* Fotos reales: mismo truco de dos fotogramas, apiladas una sobre otra */
 .ph {
-  position: relative; width: 100%; max-width: 320px; aspect-ratio: 3 / 2;
-  margin: 0 auto 14px; border-radius: 12px; overflow: hidden;
-  border: 0.5px solid var(--hair); background: var(--l1);
+  position: relative; width: 100%; aspect-ratio: 3 / 2;
+  margin: 0 0 16px; border-radius: var(--r-in); overflow: hidden;
+  border: 0.5px solid var(--hair2); background: rgba(255, 255, 255, 0.04);
 }
 .ph img {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  filter: var(--photo);
   animation: mvflip 1.8s steps(1, end) infinite;
 }
 .ph .ph-b { animation-delay: 0.9s; }
@@ -327,184 +632,233 @@ input[type="number"], input[type="date"] {
   .ph .ph-a { animation: none; opacity: 1; }
 }
 
-.cue { font-size: 15px; line-height: 20px; color: var(--fg-var); margin: 0; }
-.vid { display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 600; letter-spacing: 0.03em; text-decoration: none; }
+.cue { font-size: 15px; line-height: 21px; color: var(--fg2); margin: 0; }
+.vid { display: inline-block; margin-top: 12px; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
 
-details.card summary { font-size: 15px; font-weight: 600; cursor: pointer; list-style: none; }
-details.card summary::-webkit-details-marker { display: none; }
-details.card summary::after { content: ' ›'; color: var(--lime); }
+details.blk summary { font-size: 15px; font-weight: 600; cursor: pointer; list-style: none; color: var(--fg2); }
+details.blk summary::-webkit-details-marker { display: none; }
+details.blk summary::after { content: ' ›'; color: var(--fg3); }
+details.blk[open] summary { color: var(--fg); margin-bottom: 12px; }
+
+/* ---------- dieta: recetas como filas ---------- */
+.meal { border-bottom: 0.5px solid var(--hair2); }
+.meal .slot {
+  display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--acc); margin-bottom: 4px;
+}
+.meal .ex-state { font-size: 17px; width: 22px; text-align: center; color: var(--fg3); }
+.meal.open .ex-state { color: var(--fg); }
+.recipe { padding-bottom: 22px; }
+.recipe h4 {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--fg3); margin: 0 0 8px;
+}
+.recipe h4 + ul, .recipe h4 + ol { margin: 0 0 18px; padding-left: 18px; }
+.recipe li { font-size: 15px; line-height: 21px; color: var(--fg2); margin-bottom: 5px; }
+.recipe li::marker { color: var(--fg3); }
+.recipe .tip {
+  margin: 0; padding-left: 14px; border-left: 2px solid var(--acc);
+  font-size: 14px; line-height: 20px; color: var(--fg2);
+}
 
 /* ---------- gráficos ---------- */
-.chart { width: 100%; height: 160px; display: block; margin-top: 8px; overflow: visible; }
-.chart .ln { fill: none; stroke: var(--lime); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
-.chart .ln2 { fill: none; stroke: var(--fg-var); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 4 3; }
-.chart .dt { fill: var(--lime); }
-.chart .dt2 { fill: var(--fg-var); }
-.chart .gr { stroke: var(--hair-soft); stroke-width: 1; }
-.chart .tx { fill: var(--outline); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
-/* ---------- resumen de progreso ---------- */
-.stats { display: flex; gap: 10px; margin: 14px 0 4px; }
-.stats > div {
-  flex: 1; background: var(--l2); border: 0.5px solid var(--hair);
-  border-radius: 12px; padding: 12px 10px; text-align: center;
-}
-.stats .n { display: block; font-size: 26px; line-height: 30px; font-weight: 500; color: var(--lime); }
-.stats .n.warnv { color: var(--danger); }
-.stats em { display: block; font-style: normal; font-size: 11px; line-height: 14px; color: var(--outline); margin-top: 4px; }
-.bullets { margin: 14px 0 0; padding-left: 18px; }
-.bullets li { font-size: 15px; line-height: 20px; color: var(--fg-var); margin-bottom: 8px; }
-.bullets li::marker { color: var(--lime); }
-.bullets strong { color: var(--fg); }
+.chart { width: 100%; height: 170px; display: block; margin-top: 18px; overflow: visible; }
+.chart .ln { fill: none; stroke: var(--acc); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .ln2 { fill: none; stroke: var(--fg2); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 4 3; }
+.chart .dt { fill: var(--acc); }
+.chart .dt2 { fill: var(--fg2); }
+.chart .gr { stroke: var(--hair2); stroke-width: 1; }
+.chart .tx { fill: var(--fg3); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
 
-.legend { display: flex; gap: 16px; font-size: 13px; color: var(--outline); margin-top: 10px; }
-.swatch { display: inline-block; width: 8px; height: 8px; border-radius: 999px; vertical-align: 0; margin-right: 6px; }
+.bullets { margin: 18px 0 0; padding-left: 18px; }
+.bullets li { font-size: 15px; line-height: 21px; color: var(--fg2); margin-bottom: 10px; }
+.bullets li::marker { color: var(--fg3); }
+.bullets strong { color: var(--fg); font-weight: 600; }
 
+.legend { display: flex; gap: 18px; font-size: 13px; color: var(--fg3); margin-top: 16px; }
+.swatch { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-pill); vertical-align: 0; margin-right: 7px; }
+
+/* appearance:none quita la flecha nativa, así que hay que devolverla: un desplegable
+   que no parece desplegable es un botón roto. */
 select.picker {
-  width: 100%; padding: 13px 14px; margin-bottom: 12px; min-height: 44px;
-  border: 1px solid var(--hair); border-radius: var(--r-ctl);
-  background: var(--l2); color: var(--fg); font-size: 15px;
+  width: 100%; padding: 14px 38px 14px 15px; min-height: 46px;
+  border: 0.5px solid var(--hair2); border-radius: var(--r-in);
+  color: var(--fg); font-size: 15px;
   appearance: none; -webkit-appearance: none;
+  background-color: rgba(255, 255, 255, 0.05);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2362636b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9.5l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  background-size: 16px 16px;
 }
-select.picker:focus { outline: none; border-color: var(--lime); }
+select.picker:focus { outline: none; border-color: var(--acc); }
 
-/* ---------- barra de descanso (glass flotante) ---------- */
+/* ---------- descanso: pastilla de cristal sobre el dock ---------- */
 .rest {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-  display: flex; align-items: center; gap: 14px;
-  padding: 14px var(--pad) calc(14px + env(safe-area-inset-bottom));
-  background: rgba(26, 27, 31, 0.78);
-  backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
-  border-top: 1px solid var(--hair);
+  position: fixed; left: 0; right: 0; margin: 0 auto;
+  bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 40;
+  display: flex; align-items: center; gap: 12px;
+  width: calc(100% - 28px); max-width: 420px;
+  padding: 10px 12px 12px;
+  background: var(--glass);
+  backdrop-filter: blur(36px) saturate(1.9); -webkit-backdrop-filter: blur(36px) saturate(1.9);
+  border: 0.5px solid rgba(255, 255, 255, 0.11);
+  border-radius: var(--r-dock);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 18px 46px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
   transform: translateZ(0);
 }
 .rest-time {
-  font-size: 34px; line-height: 38px; font-weight: 500; letter-spacing: -0.04em;
-  min-width: 92px; color: var(--lime);
+  font-size: 26px; line-height: 30px; font-weight: 500; letter-spacing: -0.045em;
+  min-width: 68px; color: var(--fg);
 }
-.rest.over .rest-time { color: var(--lime-dim); }
+.rest.over .rest-time { color: var(--acc-dim); }
 .rest-meta { flex: 1; min-width: 0; }
 .rest-meta strong {
-  display: block; font-size: 15px; line-height: 20px; font-weight: 600;
+  display: block; font-size: 14px; line-height: 19px; font-weight: 600;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.rest-meta span { font-size: 13px; color: var(--outline); }
+.rest-meta span { font-size: 12.5px; color: var(--fg3); }
 .rest-btn {
-  border: 1px solid var(--hair); background: rgba(255, 255, 255, 0.06);
-  color: var(--fg); border-radius: 999px; padding: 10px 14px;
-  font-size: 13px; font-weight: 600; cursor: pointer; min-height: 44px; white-space: nowrap;
+  border: 0.5px solid var(--hair2); background: rgba(255, 255, 255, 0.07);
+  color: var(--fg); border-radius: var(--r-pill); padding: 10px 13px;
+  font-size: 13px; font-weight: 600; cursor: pointer; min-height: 40px; white-space: nowrap;
+  transition: transform 0.15s var(--e);
 }
-.rest-btn:active { border-color: var(--lime); }
+.rest-btn:active { transform: scale(0.95); }
+/* pista que se vacía: el único movimiento continuo de la app, y es dato real */
+.rest-bar {
+  position: absolute; left: 0; bottom: 0; height: 2px;
+  background: var(--acc); transition: width 0.5s linear;
+}
+.rest.over .rest-bar { background: var(--acc-dim); }
 
-/* ---------- navegación inferior (glass) ---------- */
+/* ---------- dock: cristal flotante, solo iconos ----------
+   Aproximación web de vidrio (backdrop-filter + borde y luz interior). No es el
+   Liquid Glass nativo de Apple, que solo existe en sus plataformas. */
 .tabs {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-  display: flex;
-  background: rgba(18, 19, 23, 0.72);
-  backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
-  border-top: 1px solid var(--hair);
-  padding-bottom: env(safe-area-inset-bottom);
+  position: fixed; left: 0; right: 0; margin: 0 auto;
+  bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 30;
+  display: flex; gap: 4px; padding: 6px;
+  width: max-content;
+  background: var(--glass);
+  backdrop-filter: blur(36px) saturate(1.9); -webkit-backdrop-filter: blur(36px) saturate(1.9);
+  border: 0.5px solid rgba(255, 255, 255, 0.11);
+  border-radius: var(--r-dock);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 16px 44px rgba(0, 0, 0, 0.62);
   /* capa propia: en iOS reduce que el elemento fijo salte durante el rebote del scroll */
   transform: translateZ(0);
 }
 .tabs button {
-  flex: 1; border: 0; background: none; cursor: pointer;
-  padding: 10px 4px 12px; min-height: 56px;
-  display: grid; gap: 4px; justify-items: center;
-  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
-  color: var(--outline);
+  width: 56px; height: 48px; border: 0; background: none; cursor: pointer;
+  border-radius: 18px; display: grid; place-items: center; padding: 0;
+  color: var(--fg3);
+  transition: color 0.25s var(--e), background 0.25s var(--e), transform 0.2s var(--e);
 }
 .tabs button .ic { display: block; width: 23px; height: 23px; }
 .tabs button .ic svg { display: block; width: 100%; height: 100%; }
-.tabs button.on { color: var(--lime); }
-.tabs button.on .ic { filter: drop-shadow(0 0 7px rgba(195, 244, 0, 0.55)); }
-
-/* ---------- avisos ---------- */
-.note {
-  background: var(--l2); border: 0.5px solid var(--hair);
-  border-left: 2px solid var(--lime);
-  border-radius: 12px; padding: 14px 16px; font-size: 15px; line-height: 20px;
-  color: var(--fg-var); margin-bottom: 12px;
+/* La etiqueta sigue en el DOM para lectores de pantalla, pero el dock es de iconos. */
+.tabs button .lb {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
 }
-.note strong { color: var(--fg); }
-.note.warn { border-left-color: var(--danger); }
+.tabs button:active { transform: scale(0.94); }
+.tabs button.on {
+  color: var(--acc);
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.1);
+}
 
-/* aviso de versión nueva: barra discreta arriba, por encima de la cabecera pegajosa */
+/* ---------- avisos: sin caja, solo un filo a la izquierda ---------- */
+.note {
+  border-left: 2px solid var(--fg3);
+  padding: 2px 0 2px 15px; margin: 20px 0;
+  font-size: 14.5px; line-height: 20px; color: var(--fg2);
+}
+.note strong { color: var(--fg); font-weight: 600; }
+.note.warn { border-left-color: var(--warn); }
+.note.today-note { border-left-color: var(--acc); }
+
+/* aviso de versión nueva: barra blanco roto, por encima de todo */
 .update {
   position: fixed; top: 0; left: 0; right: 0; z-index: 50;
   display: flex; align-items: center; gap: 10px;
   padding: calc(10px + env(safe-area-inset-top)) var(--pad) 10px;
-  background: var(--lime); color: var(--on-lime);
+  background: var(--fg); color: var(--bg);
   font-size: 13.5px; line-height: 18px; font-weight: 600;
 }
 .upd-txt { flex: 1; min-width: 0; }
 .upd-btn {
-  flex: 0 0 auto; border: 0; border-radius: 999px; cursor: pointer;
-  background: var(--on-lime); color: var(--lime);
-  padding: 8px 14px; font-size: 13px; font-weight: 700; min-height: 36px;
+  flex: 0 0 auto; border: 0; border-radius: var(--r-pill); cursor: pointer;
+  background: var(--bg); color: var(--fg);
+  padding: 8px 14px; font-size: 13px; font-weight: 600; min-height: 36px;
 }
 .upd-btn[disabled] { opacity: 0.6; }
 .upd-x {
-  flex: 0 0 auto; border: 0; background: none; color: var(--on-lime);
+  flex: 0 0 auto; border: 0; background: none; color: var(--bg);
   font-size: 15px; cursor: pointer; padding: 8px; min-height: 36px;
 }
 
 /* versión instalada, al pie de Ajustes */
 .ver {
   text-align: center; font-family: var(--mono); font-size: 12px;
-  color: var(--outline); letter-spacing: 0; margin: 18px 0 0;
+  color: var(--fg3); letter-spacing: 0; margin: 34px 0 0;
 }
 
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%);
-  bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 60;
-  background: rgba(41, 42, 46, 0.92);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border: 0.5px solid var(--hair);
-  color: var(--fg); padding: 12px 18px; border-radius: 999px;
+  bottom: calc(146px + env(safe-area-inset-bottom)); z-index: 60;
+  background: var(--glass);
+  backdrop-filter: blur(30px) saturate(1.9); -webkit-backdrop-filter: blur(30px) saturate(1.9);
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  color: var(--fg); padding: 12px 18px; border-radius: var(--r-pill);
   font-size: 15px; font-weight: 600; text-align: center;
   max-width: calc(100vw - 32px);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
 }
 
-/* chip de estado de sincronización */
-.sync {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-size: 13px; color: var(--fg-var);
-  border: 1px solid var(--hair); border-radius: 999px; padding: 6px 12px;
-}
-.dot { width: 7px; height: 7px; border-radius: 999px; background: var(--outline); flex: 0 0 7px; }
-.dot.ok { background: var(--lime); box-shadow: var(--glow-soft); }
-.dot.wait { background: var(--lime-dim); }
-
-/* ---------- selector de usuario ---------- */
-.chooser { display: grid; gap: 12px; margin-top: 18vh; }
-.chooser .head { text-align: center; margin-bottom: 10px; }
-.chooser h1 {
-  font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: -0.02em;
-}
-.chooser .card.tap { text-align: center; padding: 28px; }
-.chooser .card.tap h2 { font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.01em; color: var(--lime); }
-
-/* ---------- historial ---------- */
-.hist { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 12px; }
-.hist th {
-  font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
-  color: var(--outline); text-align: left; padding-bottom: 8px;
-}
-.hist td { padding: 8px 4px; border-top: 1px solid var(--hair-soft); color: var(--fg-var); }
-.hist td:first-child { color: var(--outline); white-space: nowrap; }
-
-/* ---------- campos ---------- */
-.field { display: grid; gap: 6px; margin-bottom: 14px; }
+/* ---------- campos sueltos (alta, peso corporal) ---------- */
+.field { display: grid; gap: 7px; margin-bottom: 16px; }
 .field label {
-  font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.05em;
-  text-transform: uppercase; color: var(--outline);
+  font-size: 11px; line-height: 15px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--fg3);
 }
 .field input {
-  padding: 13px 14px; min-height: 44px; font-size: 16px;
-  border: 1px solid var(--hair); border-radius: var(--r-ctl);
-  background: var(--l2); color: var(--fg);
+  padding: 13px 15px; min-height: 46px; font-size: 16px;
+  border: 0.5px solid var(--hair2); border-radius: var(--r-in);
+  background: rgba(255, 255, 255, 0.05); color: var(--fg);
+  transition: border-color 0.2s var(--e);
 }
-.field input:focus { outline: none; border-color: var(--lime); }
+.field input:focus { outline: none; border-color: var(--acc); }
+.field select.picker { margin: 0; }
+
+/* ---------- historial ---------- */
+.hist { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 14px; }
+.hist th {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--fg3); text-align: left; padding-bottom: 10px;
+}
+.hist td { padding: 9px 4px; border-top: 0.5px solid var(--hair2); color: var(--fg2); }
+.hist td:first-child { color: var(--fg3); white-space: nowrap; }
+
+/* ---------- editor de rutina ---------- */
+.ed-ex { border-top: 0.5px solid var(--hair2); padding: 16px 0 4px; margin-top: 4px; }
+.ed-ex label { display: block; font-size: 11px; color: var(--fg3); }
+.ed-ex input {
+  width: 100%; margin-top: 5px; padding: 9px 10px; min-height: 40px; font-size: 15px;
+  border: 0.5px solid var(--hair2); border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05); color: var(--fg);
+}
+.ed-ex input:focus { outline: none; border-color: var(--acc); }
+.ed-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+
+/* Transparencia reducida: el cristal pasa a relleno sólido, la información no cambia. */
+@media (prefers-reduced-transparency: reduce) {
+  .nav, .tabs, .rest, .toast {
+    background: #101116;
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }

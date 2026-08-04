@@ -8,6 +8,7 @@ export const EN = {
     loginUser: 'Username',
     loginPin: 'PIN',
     loginBtn: 'Sign in',
+    loginShowPin: 'Show PIN',
     loginCreateTitle: 'Create a new account',
     loginCreateSub: 'Answer a one-minute questionnaire and the app generates your routine and diet.',
     loginNeedNet: 'You need a connection the first time',
@@ -91,6 +92,9 @@ export const EN = {
     yesterday: 'Yesterday',
     daysAgo: '{0} days ago',
     today: 'Today',
+    weekKicker: 'This week',
+    weekLeft: '{0} to go',
+    weekAllDone: 'week complete',
     trackingKicker: 'Tracking',
     bodyCard: 'Body weight and waist',
 

@@ -3,7 +3,7 @@
 // (usuario.github.io/gym/), no en la raíz del dominio.
 
 // Subir la versión al añadir archivos: fuerza a reconstruir la caché en los móviles.
-const CACHE = 'gym-v6';
+const CACHE = 'gym-v7';
 const SHELL = [
   './',
   './index.html',
@@ -21,6 +21,9 @@ const SHELL = [
   './manifest.webmanifest',
   './icon-180.png',
   './icon-512.png',
+  // Las demás fotos se cachean al verlas (network-first), pero esta sale en la pantalla
+  // de acceso, que es la primera: tiene que estar desde el primer arranque.
+  './photos/barbell-squat-0.jpg',
 ];
 
 self.addEventListener('install', (e) => {
