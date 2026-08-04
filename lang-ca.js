@@ -186,11 +186,17 @@ export const CA = {
   },
 
   users: {
+    jan: { subtitle: "Cinc dies · principiant · guanyar massa muscular" },
     anna: { subtitle: 'Tors–cama · 4 dies · guanyar massa muscular' },
     david: { subtitle: 'Recomposició · 4 dies · prioritat tronc superior' },
   },
 
   targets: {
+    jan: {
+      estrategia: 'Superàvit per créixer i guanyar múscul',
+      detalle: 'Amb 52 kg per 177 cm estàs per sota del teu pes, i a sobre has posat que estàs en dèficit. Això és exactament el contrari del que necessites: als 15 anys i amb 0-6 mesos de gimnàs, el múscul no apareix per entrenar més, apareix per menjar més. Objectiu: pujar 0,3-0,5 kg al mes. Si la bàscula no es mou en 3 setmanes, no és la rutina — és que estàs menjant poc.',
+      proteinaNota: 'Els teus 115 g són el mínim. Amb la proteïna en pols que ja prens hi arribes fàcil, però el que de veritat et falta són les calories: la crema d’arròs i l’arròs, la pasta i el pa són els teus aliats aquí.',
+    },
     anna: {
       estrategia: 'Superàvit lleuger per guanyar múscul',
       detalle: 'Amb 52 kg i un 15 % de greix no hi ha res a definir: sense menjar per sobre del manteniment no es construeix teixit nou. L’objectiu és pujar 0,2-0,4 kg al mes, no més — per sobre d’això el que es guanya és greix.',
@@ -204,6 +210,11 @@ export const CA = {
   },
 
   days: {
+    'j-pecho-a': { name: "Pit, espatlla i tríceps", subtitle: "Empenta · sessió A", warmup: "5 min de bici o el·líptica · mobilitat d’espatlla amb banda (20 rotacions externes) · 15 face pull molt lleugers. Al press banca: barra buida × 15 i després 60 % × 6. Tens 15 anys i portes poc entrenant: la tècnica va primer que els quilos, sempre." },
+    'j-espalda-a': { name: "Esquena i bíceps", subtitle: "Estirada · sessió A", warmup: "5 min de rem · 10 penjades passives de la barra de 10 s · 20 rems amb banda. Al rem amb barra: 2 sèries d’aproximació al 50 % i al 70 %." },
+    'j-pierna': { name: "Cama", subtitle: "Tren inferior complet", warmup: "5 min de bici · mobilitat de turmell contra la paret (10 per costat) · 90/90 de maluc · 15 ponts de gluti. A la sentadilla: barra buida × 10, 50 % × 5 i 70 % × 3." },
+    'j-pecho-b': { name: "Pit, espatlla i tríceps", subtitle: "Empenta · sessió B", warmup: "5 min de rem · mobilitat toràcica · 20 rotacions externes amb banda · 15 face pull lleugers. Al press inclinat: barra buida × 12 i 60 % × 6." },
+    'j-espalda-b': { name: "Esquena, braç i abdomen", subtitle: "Estirada · sessió B, amb bessons i avantbraç", warmup: "5 min de bici · 10 penjades passives de la barra · 20 rems amb banda · mobilitat de canell abans del treball d’avantbraç." },
     'a-torso-a': { name: 'Tors A', subtitle: 'Esquena vertical, espatlla i braços', warmup: '5 min de rem o el·líptica suau · mobilitat de columna toràcica (gat-camell, rotacions) · 20 rotacions externes d’espatlla amb banda · dislocacions amb pal. Al jaló: 2 sèries d’aproximació amb el 50 % i el 75 % del pes de treball, 5 reps cadascuna.' },
     'a-pierna-a': { name: 'Cama A', subtitle: 'Dominant de genoll', warmup: '5 min de bicicleta · mobilitat de turmell contra la paret (10 per costat) · 90/90 de maluc · 15 ponts de gluti i 15 passos laterals amb banda. A la sentadilla: barra buida × 10, després 50 % × 5, 70 % × 3 i 85 % × 1.' },
     'a-torso-b': { name: 'Tors B', subtitle: 'Esquena horitzontal, espatlla i braços', warmup: '5 min de rem · mobilitat toràcica de genolls · 20 face pull lleugers · 10 penjades passives de la barra (5-10 s cadascuna). Al rem amb manuella: 1 sèrie d’aproximació al 60 % × 8 per braç.' },
@@ -215,6 +226,43 @@ export const CA = {
   },
 
   ex: {
+    'j-dead-bug': { name: 'Dead bug ("insecte mort")', cue: 'De panxa enlaire, baixes braç i cama contraris sense que la lumbar es desenganxi de terra. 10 per costat, lent.' },
+    'j-press-banca': { name: "Press banca amb barra", cue: "Escàpules retretes, colzes a 45-60°. Baixa en 2 s i toca el pit sense rebotar. Derivat del teu 90 × 2: comença a 75 kg." },
+    'j-press-inclinado-mancuernas': { name: "Press inclinat amb manuelles (30°)", cue: "Pit superior: la zona que més defineix l’aspecte del tors vestit." },
+    'j-press-hombro-mancuernas': { name: "Press d’espatlla assegut amb manuelles", cue: "Respatller a 85°. Reps més altes que dilluns per acumular volum sense repetir fatiga." },
+    'j-aperturas-polea': { name: "Obertures a la politja (creuament de pit)", cue: "Supersèrie amb el següent. Politges a l’alçada de l’espatlla, junta les mans al davant i estreny 1 s." },
+    'j-triceps-cuerda': { name: "Extensió de tríceps a la politja amb corda", cue: "Supersèrie amb el següent. Colzes enganxats al costat, obre la corda al final." },
+    'j-press-frances': { name: "Press francès amb barra Z", cue: "Supersèrie amb l’anterior. Treballa la porció llarga del tríceps." },
+    'j-plancha': { name: "Planxa frontal", cue: "Gluti estret i pelvis en retroversió. Millor 30 s ben fets que 60 s amb el maluc caigut." },
+    'j-jalon-neutro': { name: "Jaló al pit, presa neutra", cue: "Pit alt, colzes cap a les costelles. Pausa d’1 s a baix." },
+    'j-face-pull': { name: "Face pull a la politja alta", cue: "Colzes alts, rotació externa al final. El millor antídot contra l’espatlla avançada." },
+    'j-curl-barra-z': { name: "Curl de bíceps amb barra Z", cue: "Supersèrie amb el següent. Colzes quiets al costat del tronc, sense balanceig de maluc." },
+    'j-curl-martillo': { name: "Curl martell amb manuelles", cue: "Supersèrie amb l’anterior. Palmells encarats: treballa el braquial." },
+    'j-rdl': { name: "Pes mort romanès amb barra", cue: "Maluc enrere, barra fregant la cuixa. Atura’t quan perdis la curvatura lumbar." },
+    'j-prensa': { name: "Premsa 45°", cue: "Peus a mitja alçada. No bloquegis els genolls a dalt; baixada controlada de 2 s." },
+    'j-femoral-tumbado': { name: "Curl femoral estirat", cue: "Maluc enganxat al banc, excèntrica lenta de 3 s. Compensa les hores d’isqui escurçat a la cadira." },
+    'j-extension-cuadriceps': { name: "Extensió de quàdriceps", cue: "Pausa d’1 s a dalt. Última sèrie amb 2-3 reps parcials." },
+    'j-gemelo-pie': { name: "Elevació de talons dempeus", cue: "Recorregut complet: estira 2 s a baix, estreny 1 s a dalt." },
+    'j-rueda-abdominal': { name: "Roda abdominal o planxa frontal", cue: "Pelvis en retroversió, sense deixar caure el maluc. Això no crema la panxa: això ho fa el dèficit." },
+    'j-press-inclinado-barra': { name: "Press inclinat amb barra (30°)", cue: "L’exercici amb millor relació esforç/resultat visible en el teu cas. Aquí és el principal." },
+    'j-press-militar': { name: "Press militar amb barra, dempeus", cue: "Gluti i abdomen estrets per no arquejar la lumbar. Cap enrere en passar la barra." },
+    'j-fondos': { name: "Fons a paral·leles", cue: "Tronc una mica inclinat endavant per carregar pit. Si no arribes a 8, fes servir la màquina assistida." },
+    'j-encogimientos': { name: "Encongiments d’espatlla amb manuelles", cue: "Puja recte, sense rotar. Pausa d’1 s a dalt." },
+    'j-remo-mancuerna': { name: "Rem amb manuella a una mà", cue: "Genoll i mà al banc. Recorregut llarg i estirament complet a baix. 10-12 per braç." },
+    'j-jalon-prono': { name: "Jaló al pit, presa prona ampla", cue: "Pit alt, estira amb els colzes cap a les costelles. Sense balanceig." },
+    'j-curl-inclinado': { name: "Curl bíceps al banc inclinat", cue: "Braç per darrere del tronc, estirament complet a baix." },
+    'j-gemelo-sentado': { name: "Elevació de talons asseguda", cue: "Treballa el soli. Reps altes, tempo lent." },
+    'j-elevacion-piernas': { name: "Elevació de cames estirada a terra", cue: "Mans sota els glutis, lumbar enganxada a terra. Baixa les cames només fins on puguis mantenir-la enganxada." },
+    'j-plancha-lateral': { name: "Planxa lateral", cue: "Suport a l’avantbraç, maluc ben alt i alineat. 20-30 s per costat, alternant." },
+    'j-laterales': { name: "Elevacions laterals amb manuelles", cue: "Puja a l’horitzontal i baixa en 3 s. Pes lleuger: si t’has de balancejar, en sobra." },
+    'j-dominada-asistida': { name: "Dominada assistida", cue: "Amb màquina o amb goma. A més assistència, més fàcil. L’objectiu del bloc és baixar l’assistència, no pujar repeticions sense més." },
+    'j-remo-barra': { name: "Rem amb barra a 45°", cue: "Tronc ferm i estira cap al melic. Si la lumbar s’arrodoneix, baixa pes: amb 15 anys això no es negocia." },
+    'j-sentadilla': { name: "Sentadilla darrere amb barra", cue: "Setmanes 1 i 2 amb barra buida fins que el patró surti sol. Profunditat fins a paral·lel, genolls seguint la punta del peu." },
+    'j-laterales-polea': { name: "Elevacions laterals a la politja", cue: "A la politja la tensió també és a baix, al revés que amb manuella dilluns. Per això hi són els dos dies." },
+    'j-deltoide-polea': { name: "Deltoide posterior a la politja", cue: "Braç creuat per davant del cos, obres cap enfora i enrere amb el colze gairebé recte." },
+    'j-triceps-barra': { name: "Extensió de tríceps a la politja, barra recta", cue: "Mateix moviment que dilluns però amb barra en lloc de corda: canvia la presa i l’estímul." },
+    'j-rdl-mancuernas': { name: "Pes mort romanès amb manuelles", cue: "Complementa la cama de dimecres sense carregar la lumbar com la barra. Maluc enrere, esquena recta." },
+    'j-granjero': { name: "Caminada del granger amb manuelles", cue: "El teu treball d’avantbraç. Espatlles enrere, abdomen estret i passes curtes. La presa és el que limita el rem i les dominades, així que això et fa més fort en tota la resta." },
     // --- Anna, Tors A
     'a-jalon-prono': { name: 'Jaló al pit, presa prona ampla', cue: 'Pit alt, estira amb els colzes cap a les costelles. Sense balanceig.' },
     'a-press-banca-mancuernas': { name: 'Press banca pla amb manuelles', cue: 'Manteniment de pectoral. Recorregut complet, sense buscar rècords.' },

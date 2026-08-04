@@ -13,7 +13,7 @@ import {
 // Versión de esta copia de la app. Va emparejada con version.json, que se sirve
 // SIEMPRE desde la red: si no coinciden es que el móvil tiene una copia vieja
 // cacheada. progression.test.mjs comprueba que las dos no se desincronicen.
-export const VERSION = '1.2.0';
+export const VERSION = '1.3.0';
 
 const app = document.getElementById('app');
 const state = { user: db.getUser(), view: 'home', dayKey: null, open: null, exKey: null, meal: null, override: {}, draft: {} };

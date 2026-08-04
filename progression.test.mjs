@@ -114,7 +114,10 @@ assert.equal(s.action, 'up', 'las series vacías se ignoran');
 // --- integridad de los datos de rutina -----------------------------------
 for (const [uk, user] of Object.entries(USERS)) {
   assert.equal(user.weekLabels.length, 5, `${uk}: 5 etiquetas de semana`);
-  assert.equal(user.days.length, 4, `${uk}: 4 días`);
+  // Anna y David entrenan 4 días; Jan, 5. Se permite el rango, no un número fijo.
+  assert.ok(user.days.length >= 4 && user.days.length <= 6, `${uk}: ${user.days.length} días`);
+  const wd = user.days.map((d) => d.weekday);
+  assert.equal(new Set(wd).size, wd.length, `${uk}: dos sesiones el mismo día de la semana`);
   const keys = new Set();
   for (const ex of allExercises(uk)) {
     assert.ok(!keys.has(ex.key), `${uk}: clave duplicada ${ex.key}`);
@@ -138,17 +141,27 @@ for (const [uk, user] of Object.entries(USERS)) {
     }    // Toda sugerencia inicial debe ser calculable en las 5 semanas
     for (let w = 1; w <= 5; w++) assert.ok(suggest(ex, [], w).weight >= 0);
   }
-  // Cada día debe cerrar con un ejercicio de core
+  // El core va SIEMPRE al final del día, nunca intercalado: es un finalizador, no
+  // algo que te deje el abdomen cansado antes de una sentadilla. Y cada persona
+  // necesita al menos tres días de core a la semana.
   const CORE = new Set(['plancha', 'plancha-lateral', 'dead-bug', 'crunch', 'rueda-abdominal']);
+  let diasConCore = 0;
   for (const d of user.days) {
-    assert.ok(CORE.has(d.exercises.at(-1).pattern), `${uk}/${d.key}: el último ejercicio no es de core`);
+    const idx = d.exercises.findIndex((e) => CORE.has(e.pattern));
+    if (idx === -1) continue;
+    diasConCore++;
+    const resto = d.exercises.slice(idx);
+    assert.ok(resto.every((e) => CORE.has(e.pattern)),
+      `${uk}/${d.key}: hay ejercicios que no son de core después del primero de core`);
   }
+  assert.ok(diasConCore >= 3, `${uk}: solo ${diasConCore} días con core, hacen falta 3`);
 }
 assert.equal(allExercises('anna').length, 33, 'Anna: 33 ejercicios');
 assert.equal(allExercises('david').length, 32, 'David: 32 ejercicios');
+assert.equal(allExercises('jan').length, 37, 'Jan: 37 ejercicios');
 
 // Material que el gimnasio no tiene: no debe quedar ni rastro
-const todos = [...allExercises('anna'), ...allExercises('david')];
+const todos = Object.keys(USERS).flatMap((u) => allExercises(u));
 // Se mira el NOMBRE, no la explicación: un cue puede mencionar el pec-deck para decir
 // justamente que ese ejercicio lo sustituye, y eso es correcto.
 for (const ex of todos) {
@@ -187,7 +200,9 @@ assert.deepEqual(Object.keys(MOVES).filter((k) => !usados.has(k)), [], 'patrones
     }
   }
 
-  const ejercicios = [...allExercises('anna'), ...allExercises('david')];
+    // TODOS los usuarios, no una lista fija: al añadir a alguien nuevo sus textos
+  // tienen que entrar también en la comprobación de idiomas.
+  const ejercicios = Object.keys(USERS).flatMap((u) => allExercises(u));
   const dias = Object.values(USERS).flatMap((u) => u.days);
   for (const [nombre, pack] of [['ca', CA], ['en', EN]]) {
     for (const ex of ejercicios) {

@@ -186,11 +186,17 @@ export const EN = {
   },
 
   users: {
+    jan: { subtitle: "Five days · beginner · build muscle" },
     anna: { subtitle: 'Upper–lower · 4 days · build muscle' },
     david: { subtitle: 'Recomposition · 4 days · upper body priority' },
   },
 
   targets: {
+    jan: {
+      estrategia: 'Surplus to grow and build muscle',
+      detalle: 'At 52 kg for 177 cm you are underweight, and on top of that you said you are in a deficit. That is exactly the opposite of what you need: at 15 and with 0-6 months in the gym, muscle does not come from training more, it comes from eating more. Target: +0.3-0.5 kg a month. If the scale has not moved in 3 weeks, it is not the routine — you are eating too little.',
+      proteinaNota: 'Your 115 g are the floor. With the protein powder you already take you get there easily, but what you are really missing is calories: rice cream and rice, pasta and bread are your allies here.',
+    },
     anna: {
       estrategia: 'Slight surplus to build muscle',
       detalle: 'At 52 kg and 15 % body fat there is nothing to cut: without eating above maintenance no new tissue gets built. The goal is +0.2-0.4 kg a month, no more — beyond that what you gain is fat.',
@@ -204,6 +210,11 @@ export const EN = {
   },
 
   days: {
+    'j-pecho-a': { name: "Chest, shoulders and triceps", subtitle: "Push · session A", warmup: "5 min bike or elliptical · band shoulder mobility (20 external rotations) · 15 very light face pulls. On the bench: empty bar × 15 then 60 % × 6. You are 15 and new to this: technique comes before kilos, always." },
+    'j-espalda-a': { name: "Back and biceps", subtitle: "Pull · session A", warmup: "5 min rowing · 10 passive bar hangs of 10 s · 20 band rows. On the barbell row: 2 ramp-up sets at 50 % and 70 %." },
+    'j-pierna': { name: "Legs", subtitle: "Full lower body", warmup: "5 min bike · ankle mobility against the wall (10 per side) · 90/90 hip · 15 glute bridges. On the squat: empty bar × 10, 50 % × 5 and 70 % × 3." },
+    'j-pecho-b': { name: "Chest, shoulders and triceps", subtitle: "Push · session B", warmup: "5 min rowing · thoracic mobility · 20 band external rotations · 15 light face pulls. On the incline press: empty bar × 12 and 60 % × 6." },
+    'j-espalda-b': { name: "Back, arms and core", subtitle: "Pull · session B, with calves and forearms", warmup: "5 min bike · 10 passive bar hangs · 20 band rows · wrist mobility before the forearm work." },
     'a-torso-a': { name: 'Upper A', subtitle: 'Vertical back, shoulders and arms', warmup: '5 min easy rowing or elliptical · thoracic spine mobility (cat-camel, rotations) · 20 band external rotations · shoulder dislocations with a stick. On the pulldown: 2 ramp-up sets at 50 % and 75 % of working weight, 5 reps each.' },
     'a-pierna-a': { name: 'Legs A', subtitle: 'Knee dominant', warmup: '5 min bike · ankle mobility against the wall (10 per side) · 90/90 hip · 15 glute bridges and 15 band lateral walks. On the squat: empty bar × 10, then 50 % × 5, 70 % × 3 and 85 % × 1.' },
     'a-torso-b': { name: 'Upper B', subtitle: 'Horizontal back, shoulders and arms', warmup: '5 min rowing · thoracic mobility on knees · 20 light face pulls · 10 passive bar hangs (5-10 s each). On the dumbbell row: 1 ramp-up set at 60 % × 8 per arm.' },
@@ -215,6 +226,43 @@ export const EN = {
   },
 
   ex: {
+    'j-dead-bug': { name: 'Dead bug', cue: 'On your back, lower opposite arm and leg without letting your lower back come off the floor. 10 per side, slow.' },
+    'j-press-banca': { name: "Barbell bench press", cue: "Shoulder blades retracted, elbows at 45-60°. Down in 2 s and touch the chest without bouncing. Derived from your 90 × 2: start at 75 kg." },
+    'j-press-inclinado-mancuernas': { name: "Incline dumbbell press (30°)", cue: "Upper chest: the area that most defines how the torso looks with a shirt on." },
+    'j-press-hombro-mancuernas': { name: "Seated dumbbell shoulder press", cue: "Backrest at 85°. Higher reps than Monday to add volume without repeating the fatigue." },
+    'j-aperturas-polea': { name: "Cable chest fly (crossover)", cue: "Superset with the next one. Pulleys at shoulder height, bring your hands together in front and squeeze 1 s." },
+    'j-triceps-cuerda': { name: "Rope triceps pushdown", cue: "Superset with the next one. Elbows pinned to your sides, spread the rope at the end." },
+    'j-press-frances': { name: "EZ-bar skull crusher", cue: "Superset with the previous one. Works the long head of the triceps." },
+    'j-plancha': { name: "Front plank", cue: "Glutes squeezed and pelvis tucked. Better 30 s done well than 60 s with the hips sagging." },
+    'j-jalon-neutro': { name: "Lat pulldown, neutral grip", cue: "Chest tall, elbows towards your ribs. 1 s pause at the bottom." },
+    'j-face-pull': { name: "High cable face pull", cue: "Elbows high, external rotation at the end. The best antidote to a programmer’s forward shoulder." },
+    'j-curl-barra-z': { name: "EZ-bar biceps curl", cue: "Superset with the next one. Elbows still by your torso, no hip swing." },
+    'j-curl-martillo': { name: "Hammer curl", cue: "Superset with the previous one. Palms facing: works the brachialis." },
+    'j-rdl': { name: "Barbell Romanian deadlift", cue: "Hips back, bar grazing your thigh. Stop when you lose the lumbar curve." },
+    'j-prensa': { name: "Leg press 45°", cue: "Feet mid-height. Do not lock the knees at the top; controlled 2 s descent." },
+    'j-femoral-tumbado': { name: "Lying leg curl", cue: "Hips pinned to the bench, slow 3 s eccentric. Offsets the hours of shortened hamstrings in the chair." },
+    'j-extension-cuadriceps': { name: "Leg extension", cue: "1 s pause at the top. Last set with 2-3 partial reps." },
+    'j-gemelo-pie': { name: "Standing calf raise", cue: "Full range: stretch 2 s at the bottom, squeeze 1 s at the top." },
+    'j-rueda-abdominal': { name: "Ab wheel or front plank", cue: "Pelvis tucked, do not let the hips drop. This does not burn belly fat: the deficit does that." },
+    'j-press-inclinado-barra': { name: "Incline barbell press (30°)", cue: "The best effort-to-visible-result ratio in your case. Here it is the main lift, not an accessory." },
+    'j-press-militar': { name: "Standing barbell overhead press", cue: "Glutes and abs braced so you do not arch. Head back as the bar passes." },
+    'j-fondos': { name: "Parallel bar dips", cue: "Torso leaning slightly forward to load the chest. If you cannot reach 8, use the assisted machine." },
+    'j-encogimientos': { name: "Dumbbell shrugs", cue: "Straight up, no rolling. 1 s pause at the top." },
+    'j-remo-mancuerna': { name: "Single-arm dumbbell row", cue: "Knee and hand on the bench. Long range and full stretch at the bottom. 10-12 per arm." },
+    'j-jalon-prono': { name: "Lat pulldown, wide overhand grip", cue: "Chest tall, pull with your elbows towards your ribs. No swinging." },
+    'j-curl-inclinado': { name: "Incline bench biceps curl", cue: "Arm behind the torso, full stretch at the bottom." },
+    'j-gemelo-sentado': { name: "Seated calf raise", cue: "Works the soleus. High reps, slow tempo." },
+    'j-elevacion-piernas': { name: "Lying leg raise on the floor", cue: "Hands under your glutes, lower back pressed to the floor. Only lower your legs as far as you can keep it pressed." },
+    'j-plancha-lateral': { name: "Side plank", cue: "Forearm support, hips high and in line. 20-30 s per side, alternating." },
+    'j-laterales': { name: "Dumbbell lateral raises", cue: "Up to horizontal and down over 3 s. Light weight: if you have to swing, it is too heavy." },
+    'j-dominada-asistida': { name: "Assisted pull-up", cue: "Machine or band. More assistance means easier. The goal for the block is to lower the assistance, not just add reps." },
+    'j-remo-barra': { name: "Barbell row at 45°", cue: "Torso rigid and pull towards your navel. If your lower back rounds, drop the weight: at 15 that is not negotiable." },
+    'j-sentadilla': { name: "Back squat", cue: "Weeks 1 and 2 with the empty bar until the pattern is automatic. Depth to parallel, knees tracking over your toes." },
+    'j-laterales-polea': { name: "Cable lateral raises", cue: "On the cable the tension is also at the bottom, the opposite of Monday’s dumbbells. That is why both days are there." },
+    'j-deltoide-polea': { name: "Cable rear delt fly", cue: "Arm crossed in front of your body, open out and back with the elbow almost straight." },
+    'j-triceps-barra': { name: "Straight-bar triceps pushdown", cue: "Same movement as Monday but with a bar instead of the rope: different grip, different stimulus." },
+    'j-rdl-mancuernas': { name: "Dumbbell Romanian deadlift", cue: "Complements Wednesday’s legs without loading the lower back like the barbell. Hips back, flat back." },
+    'j-granjero': { name: "Farmer’s walk with dumbbells", cue: "Your forearm work. Shoulders back, core braced and short steps. Grip is what limits rows and pull-ups, so this makes you stronger at everything else." },
     // --- Anna, Upper A
     'a-jalon-prono': { name: 'Lat pulldown, wide overhand grip', cue: 'Chest tall, pull with your elbows towards your ribs. No swinging.' },
     'a-press-banca-mancuernas': { name: 'Flat dumbbell bench press', cue: 'Chest maintenance. Full range, no need to chase records.' },

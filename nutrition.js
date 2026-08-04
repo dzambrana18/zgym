@@ -14,6 +14,12 @@ export const TARGETS = {
     detalle: 'Con 52 kg y un 15 % de grasa no hay nada que definir: sin comer por encima del mantenimiento no se construye tejido nuevo. El objetivo es subir 0,2-0,4 kg al mes, no más — por encima de eso lo que se gana es grasa.',
     proteinaNota: 'Tu mínimo son 110 g. Pasarte no es problema; quedarte corta sí.',
   },
+  jan: {
+    kcal: 2800, prot: 115, fat: 60, carb: 450,
+    estrategia: 'Superávit para crecer y ganar músculo',
+    detalle: 'Con 52 kg para 177 cm estás por debajo de tu peso, y encima has puesto que estás en déficit. Eso es exactamente lo contrario de lo que necesitas: a los 15 años y con 0-6 meses de gimnasio, el músculo no aparece por entrenar más, aparece por comer más. Objetivo: subir 0,3-0,5 kg al mes. Si la báscula no se mueve en 3 semanas, no es la rutina — es que estás comiendo poco.',
+    proteinaNota: 'Tus 115 g son el mínimo. Con la proteína en polvo que ya tomas llegas fácil, pero lo que de verdad te falta son las calorías: la crema de arroz y el arroz, la pasta y el pan son tus aliados aquí.',
+  },
   david: {
     kcal: 2400, prot: 190, fat: 70, carb: 245,
     estrategia: 'Déficit moderado para recomposición',
@@ -168,6 +174,15 @@ export const SAMPLE_DAY = {
     { key: 'requeson-fruta', slot: 'Merienda' },
     { key: 'pasta-atun', slot: 'Cena' },
     { key: 'batido-avena', slot: 'Antes de dormir', half: true },
+  ],
+  jan: [
+    { key: 'tortilla-pavo', slot: 'Desayuno' },
+    { key: 'tostada-cacahuete', slot: 'Media mañana' },
+    { key: 'arroz-pollo', slot: 'Comida' },
+    { key: 'batido-avena', slot: 'Merienda' },
+    { key: 'pasta-atun', slot: 'Cena' },
+    { key: 'requeson-fruta', slot: 'Antes de dormir' },
+    { key: 'yogur-almendras', slot: 'Post-entreno', half: true },
   ],
   david: [
     { key: 'tortilla-pavo', slot: 'Desayuno' },

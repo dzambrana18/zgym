@@ -171,6 +171,103 @@ export const USERS = {
       },
     ],
   },
+
+  // Jan · 15 años, 52 kg, 177 cm, 13 % de grasa. Principiante (0-6 meses).
+  // Split de 5 días con la estructura que pidió él, con una corrección: su versión
+  // dejaba la espalda a la mitad de volumen que el pecho, y en un principiante eso
+  // acaba en hombros adelantados. El día 5 pasa a ser un segundo día de tirón que
+  // además lleva los gemelos, el antebrazo y el abdomen que sí quería.
+  jan: {
+    name: 'Jan',
+    remoteKey: 'jan_5d1a83',
+    subtitle: 'Cinco días · principiante · ganar masa muscular',
+    // Principiante: se entrena más lejos del fallo que Anna y David.
+    weekLabels: ['4', '3', '3', '2', '4'],
+    days: [
+      {
+        key: 'j-pecho-a',
+        name: 'Pecho, hombro y tríceps',
+        subtitle: 'Empuje · sesión A',
+        weekday: 'Lunes',
+        warmup: '5 min de bici o elíptica · movilidad de hombro con banda (20 rotaciones externas) · 15 face pull muy ligeros. En el press banca: barra vacía × 15 y luego 60 % × 6. Tienes 15 años y llevas poco entrenando: la técnica va primero que los kilos, siempre.',
+        exercises: [
+          { key: 'j-press-banca', pattern: 'press-banca', photo: 'barbell-bench-press-medium-grip', name: 'Press banca con barra', cue: 'Escápulas atrás y abajo, codos a 45°. Baja controlado hasta tocar el pecho, sin rebotar. Si dudas, la primera semana solo con la barra vacía: 20 kg ya es peso suficiente para aprender el patrón.', video: 'press+banca+con+barra+tecnica+correcta', sets: 4, repMin: 6, repMax: 8, rir: 3, restSec: 180, startLoad: 25, unit: 'kg', increment: 2.5 },
+          { key: 'j-press-inclinado-mancuernas', pattern: 'press-inclinado', photo: 'incline-dumbbell-press', name: 'Press inclinado con mancuernas (30°)', cue: 'Pecho superior. Baja hasta notar estiramiento sin forzar el hombro.', video: 'press+inclinado+con+mancuernas+tecnica', sets: 3, repMin: 8, repMax: 10, rir: 3, restSec: 120, startLoad: 8, unit: 'kg-por-mano', increment: 1 },
+          { key: 'j-press-hombro-mancuernas', pattern: 'press-vertical', photo: 'dumbbell-shoulder-press', name: 'Press de hombro sentado con mancuernas', cue: 'Respaldo a 85°, costillas abajo para no arquear la lumbar.', video: 'press+de+hombro+sentado+con+mancuernas+tecnica', sets: 3, repMin: 8, repMax: 10, rir: 3, restSec: 120, startLoad: 7, unit: 'kg-por-mano', increment: 1 },
+          { key: 'j-aperturas-polea', pattern: 'apertura', photo: 'cable-crossover', name: 'Aperturas en polea (cruce de pecho)', cue: 'Poleas a la altura del hombro, codos casi rectos. Junta las manos por delante y aprieta 1 s.', video: 'aperturas+en+polea+cruce+de+pecho+tecnica', sets: 3, repMin: 12, repMax: 15, rir: 2, restSec: 75, startLoad: 7, unit: 'kg', increment: 2.5 },
+          { key: 'j-laterales', pattern: 'elevacion-lateral', photo: 'side-lateral-raise', name: 'Elevaciones laterales con mancuernas', cue: 'Sube a la horizontal y baja en 3 s. Peso ligero: si tienes que balancearte, sobra.', video: 'elevaciones+laterales+con+mancuernas+tecnica', sets: 3, repMin: 12, repMax: 15, rir: 2, restSec: 75, startLoad: 4, unit: 'kg-por-mano', increment: 1 },
+          { key: 'j-triceps-cuerda', pattern: 'extension-triceps', photo: 'triceps-pushdown-rope-attachment', name: 'Extensión de tríceps en polea con cuerda', cue: 'Superserie con el siguiente. Codos pegados al costado y quietos.', video: 'extension+de+triceps+en+polea+con+cuerda+tecnica', sets: 3, repMin: 12, repMax: 15, rir: 2, restSec: 60, startLoad: 12, unit: 'kg', increment: 2.5 },
+          { key: 'j-press-frances', pattern: 'press-frances', photo: 'ez-bar-skullcrusher', name: 'Press francés con barra Z', cue: 'Superserie con el anterior. Tumbado, bajas hacia la frente con los codos quietos.', video: 'press+frances+con+barra+z+tecnica', sets: 2, repMin: 10, repMax: 12, rir: 2, restSec: 75, startLoad: 12, unit: 'kg', increment: 2.5 },
+          { key: 'j-plancha', pattern: 'plancha', photo: 'plank', name: 'Plancha frontal', cue: 'Glúteo apretado y pelvis en retroversión. Mejor 30 s bien que 60 s con la cadera caída.', video: 'plancha+abdominal+tecnica+correcta', sets: 3, repMin: 30, repMax: 45, rir: 2, restSec: 45, startLoad: 0, unit: 'peso-corporal', increment: null, timed: true },
+        ],
+      },
+      {
+        key: 'j-espalda-a',
+        name: 'Espalda y bíceps',
+        subtitle: 'Tirón · sesión A',
+        weekday: 'Martes',
+        warmup: '5 min de remo · 10 colgadas pasivas de la barra de 10 s · 20 remos con banda. En el remo con barra: 2 series de aproximación al 50 % y al 70 %.',
+        exercises: [
+          { key: 'j-dominada-asistida', pattern: 'dominada', photo: 'band-assisted-pull-up', name: 'Dominada asistida', cue: 'Con máquina o con goma. A más asistencia, más fácil. El objetivo del bloque es bajar la asistencia, no subir repeticiones sin más.', video: 'dominadas+en+maquina+asistida+tecnica', sets: 4, repMin: 6, repMax: 10, rir: 2, restSec: 150, startLoad: 25, unit: 'kg', increment: -2.5, assist: true },
+          { key: 'j-remo-barra', pattern: 'remo-barra', photo: 'bent-over-barbell-row', name: 'Remo con barra a 45°', cue: 'Tronco firme y tira hacia el ombligo. Si la lumbar se redondea, baja peso: con 15 años esto no se negocia.', video: 'remo+con+barra+tecnica+correcta', sets: 4, repMin: 8, repMax: 10, rir: 3, restSec: 150, startLoad: 25, unit: 'kg', increment: 2.5 },
+          { key: 'j-jalon-neutro', pattern: 'jalon', photo: 'v-bar-pulldown', name: 'Jalón al pecho, agarre neutro', cue: 'Pecho alto, codos hacia las costillas. Pausa de 1 s abajo.', video: 'jalon+al+pecho+agarre+neutro+tecnica', sets: 3, repMin: 10, repMax: 12, rir: 2, restSec: 120, startLoad: 30, unit: 'kg', increment: 2.5 },
+          { key: 'j-face-pull', pattern: 'face-pull', photo: 'face-pull', name: 'Face pull en polea alta', cue: 'Codos altos y rotación externa al final. Es lo que mantiene el hombro sano cuando haces mucho pecho.', video: 'face+pull+tecnica', sets: 3, repMin: 15, repMax: 20, rir: 2, restSec: 60, startLoad: 12, unit: 'kg', increment: 2.5 },
+          { key: 'j-curl-barra-z', pattern: 'curl-biceps', photo: 'ez-bar-curl', name: 'Curl de bíceps con barra Z', cue: 'Superserie con el siguiente. Codos quietos junto al tronco, sin balancear la cadera.', video: 'curl+de+biceps+con+barra+z+tecnica', sets: 3, repMin: 8, repMax: 10, rir: 2, restSec: 90, startLoad: 15, unit: 'kg', increment: 2.5 },
+          { key: 'j-curl-martillo', pattern: 'curl-biceps', photo: 'alternate-hammer-curl', name: 'Curl martillo con mancuernas', cue: 'Superserie con el anterior. Palmas enfrentadas: trabaja el braquial y engrosa el brazo.', video: 'curl+martillo+tecnica', sets: 3, repMin: 10, repMax: 12, rir: 2, restSec: 75, startLoad: 6, unit: 'kg-por-mano', increment: 1 },
+          { key: 'j-dead-bug', pattern: 'dead-bug', photo: 'dead-bug', name: 'Dead bug ("bicho muerto")', cue: 'Boca arriba, bajas brazo y pierna contrarios sin que la lumbar se despegue del suelo. 10 por lado, lento.', video: 'dead+bug+ejercicio+tecnica', sets: 3, repMin: 10, repMax: 10, rir: 2, restSec: 45, startLoad: 0, unit: 'peso-corporal', increment: null },
+        ],
+      },
+      {
+        key: 'j-pierna',
+        name: 'Pierna',
+        subtitle: 'Tren inferior completo',
+        weekday: 'Miércoles',
+        warmup: '5 min de bici · movilidad de tobillo contra la pared (10 por lado) · 90/90 de cadera · 15 puentes de glúteo. En la sentadilla: barra vacía × 10, 50 % × 5 y 70 % × 3.',
+        exercises: [
+          { key: 'j-sentadilla', pattern: 'sentadilla', photo: 'barbell-squat', name: 'Sentadilla trasera con barra', cue: 'Semanas 1 y 2 con barra vacía hasta que el patrón salga solo. Profundidad hasta paralelo, rodillas siguiendo la punta del pie.', video: 'sentadilla+con+barra+tecnica+correcta', sets: 4, repMin: 6, repMax: 8, rir: 3, restSec: 180, startLoad: 25, unit: 'kg', increment: 2.5 },
+          { key: 'j-rdl', pattern: 'bisagra', photo: 'romanian-deadlift', name: 'Peso muerto rumano con barra', cue: 'Cadera atrás, barra rozando el muslo. Para cuando pierdas la curvatura lumbar, no cuando se acaben las reps.', video: 'peso+muerto+rumano+tecnica', sets: 3, repMin: 8, repMax: 10, rir: 3, restSec: 150, startLoad: 30, unit: 'kg', increment: 2.5 },
+          { key: 'j-prensa', pattern: 'prensa', photo: 'leg-press', name: 'Prensa 45°', cue: 'Pies a media altura. No bloquees las rodillas arriba; bajada controlada de 2 s.', video: 'prensa+de+piernas+45+grados+tecnica', sets: 3, repMin: 10, repMax: 12, rir: 2, restSec: 120, startLoad: 60, unit: 'kg', increment: 5 },
+          { key: 'j-femoral-tumbado', pattern: 'curl-femoral', photo: 'lying-leg-curls', name: 'Curl femoral tumbado', cue: 'Cadera pegada al banco, excéntrica lenta de 3 s.', video: 'curl+femoral+tumbado+tecnica', sets: 3, repMin: 10, repMax: 12, rir: 2, restSec: 90, startLoad: 20, unit: 'kg', increment: 2.5 },
+          { key: 'j-extension-cuadriceps', pattern: 'extension-cuadriceps', photo: 'leg-extensions', name: 'Extensión de cuádriceps', cue: 'Pausa de 1 s arriba. Sin dar tirones al empezar.', video: 'extension+de+cuadriceps+maquina+tecnica', sets: 3, repMin: 12, repMax: 15, rir: 2, restSec: 90, startLoad: 20, unit: 'kg', increment: 2.5 },
+          { key: 'j-gemelo-pie', pattern: 'gemelo', photo: 'standing-calf-raises', name: 'Elevación de talones de pie', cue: 'Rango completo: estira 2 s abajo y aprieta 1 s arriba. Los gemelos crecen con recorrido, no con peso.', video: 'elevacion+de+talones+de+pie+gemelos+tecnica', sets: 4, repMin: 12, repMax: 15, rir: 2, restSec: 60, startLoad: 30, unit: 'kg', increment: 2.5 },
+          { key: 'j-rueda-abdominal', pattern: 'rueda-abdominal', photo: 'ab-roller', name: 'Rueda abdominal o plancha frontal', cue: 'Si la rueda te tira de la lumbar, hazlo de rodillas con recorrido corto o cambia a plancha.', video: 'rueda+abdominal+tecnica+correcta', sets: 3, repMin: 8, repMax: 12, rir: 2, restSec: 60, startLoad: 0, unit: 'peso-corporal', increment: null },
+        ],
+      },
+      {
+        key: 'j-pecho-b',
+        name: 'Pecho, hombro y tríceps',
+        subtitle: 'Empuje · sesión B',
+        weekday: 'Jueves',
+        warmup: '5 min de remo · movilidad torácica · 20 rotaciones externas con banda · 15 face pull ligeros. En el press inclinado: barra vacía × 12 y 60 % × 6.',
+        exercises: [
+          { key: 'j-press-inclinado-barra', pattern: 'press-inclinado', photo: 'barbell-incline-bench-press-medium-grip', name: 'Press inclinado con barra (30°)', cue: 'El pecho superior es lo que más cambia la forma del torso. Aquí es el principal.', video: 'press+inclinado+con+barra+tecnica', sets: 3, repMin: 8, repMax: 10, rir: 3, restSec: 150, startLoad: 22.5, unit: 'kg', increment: 2.5 },
+          { key: 'j-press-militar', pattern: 'press-vertical', photo: 'standing-military-press', name: 'Press militar con barra, de pie', cue: 'Glúteo y abdomen apretados para no arquear la lumbar. Cabeza atrás al pasar la barra.', video: 'press+militar+con+barra+de+pie+tecnica', sets: 4, repMin: 8, repMax: 10, rir: 3, restSec: 150, startLoad: 20, unit: 'kg', increment: 2.5 },
+          { key: 'j-fondos', pattern: 'fondos', photo: 'dips-chest-version', name: 'Fondos en paralelas asistidos', cue: 'Tronco algo inclinado hacia delante para cargar pecho. Usa la máquina de asistencia hasta llegar a 8 limpios.', video: 'fondos+en+paralelas+tecnica+pecho', sets: 3, repMin: 8, repMax: 12, rir: 2, restSec: 120, startLoad: 0, unit: 'peso-corporal', increment: null },
+          { key: 'j-laterales-polea', pattern: 'elevacion-lateral', photo: 'cable-seated-lateral-raise', name: 'Elevaciones laterales en polea', cue: 'En polea la tensión también está abajo, al revés que con mancuerna el lunes. Por eso están los dos días.', video: 'elevaciones+laterales+en+polea+tecnica', sets: 4, repMin: 12, repMax: 15, rir: 2, restSec: 75, startLoad: 5, unit: 'kg', increment: 2.5 },
+          { key: 'j-deltoide-polea', pattern: 'pajaros', photo: 'cable-rear-delt-fly', name: 'Deltoides posterior en polea', cue: 'Brazo cruzado por delante del cuerpo, abres hacia fuera y atrás con el codo casi recto.', video: 'deltoides+posterior+en+polea+unilateral+tecnica', sets: 3, repMin: 15, repMax: 20, rir: 2, restSec: 60, startLoad: 5, unit: 'kg', increment: 2.5 },
+          { key: 'j-triceps-barra', pattern: 'extension-triceps', photo: 'triceps-pushdown', name: 'Extensión de tríceps en polea, barra recta', cue: 'Mismo movimiento que el lunes pero con barra en vez de cuerda: cambia el agarre y el estímulo.', video: 'extension+de+triceps+en+polea+alta+con+barra+tecnica', sets: 3, repMin: 10, repMax: 12, rir: 2, restSec: 60, startLoad: 14, unit: 'kg', increment: 2.5 },
+          { key: 'j-encogimientos', pattern: 'encogimiento', photo: 'dumbbell-shrug', name: 'Encogimientos de hombro con mancuernas', cue: 'Sube recto hacia las orejas, sin rotar. Pausa de 1 s arriba.', video: 'encogimientos+de+hombro+trapecio+tecnica', sets: 2, repMin: 12, repMax: 15, rir: 2, restSec: 60, startLoad: 12, unit: 'kg-por-mano', increment: 2 },
+        ],
+      },
+      {
+        key: 'j-espalda-b',
+        name: 'Espalda, brazo y abdomen',
+        subtitle: 'Tirón · sesión B, con gemelo y antebrazo',
+        weekday: 'Viernes',
+        warmup: '5 min de bici · 10 colgadas pasivas de la barra · 20 remos con banda · movilidad de muñeca antes del trabajo de antebrazo.',
+        exercises: [
+          { key: 'j-remo-mancuerna', pattern: 'remo-mancuerna', photo: 'one-arm-dumbbell-row', name: 'Remo con mancuerna a una mano', cue: 'Rodilla y mano en el banco. 10-12 por brazo, recorrido largo y estiramiento completo abajo.', video: 'remo+con+mancuerna+a+una+mano+tecnica', sets: 4, repMin: 10, repMax: 12, rir: 2, restSec: 120, startLoad: 12, unit: 'kg', increment: 2 },
+          { key: 'j-jalon-prono', pattern: 'jalon', photo: 'wide-grip-lat-pulldown', name: 'Jalón al pecho, agarre prono ancho', cue: 'Agarre ancho: es lo que ensancha la espalda vista de frente. Distinto del agarre neutro del martes.', video: 'jalon+al+pecho+tecnica', sets: 3, repMin: 10, repMax: 12, rir: 2, restSec: 120, startLoad: 28, unit: 'kg', increment: 2.5 },
+          { key: 'j-rdl-mancuernas', pattern: 'bisagra', photo: 'romanian-deadlift', name: 'Peso muerto rumano con mancuernas', cue: 'Complementa la pierna del miércoles sin cargar la lumbar como la barra. Cadera atrás, espalda recta.', video: 'peso+muerto+rumano+con+mancuernas+tecnica', sets: 3, repMin: 10, repMax: 12, rir: 2, restSec: 120, startLoad: 10, unit: 'kg-por-mano', increment: 2 },
+          { key: 'j-curl-inclinado', pattern: 'curl-biceps', photo: 'incline-dumbbell-curl', name: 'Curl de bíceps en banco inclinado', cue: 'Brazo por detrás del tronco: es la posición donde más se estira el bíceps.', video: 'curl+biceps+banco+inclinado+tecnica', sets: 3, repMin: 10, repMax: 12, rir: 2, restSec: 75, startLoad: 6, unit: 'kg-por-mano', increment: 1 },
+          { key: 'j-gemelo-sentado', pattern: 'gemelo', photo: 'seated-calf-raise', name: 'Elevación de talones sentado', cue: 'Sentado trabajas el sóleo, que es el músculo de debajo del gemelo. Reps altas y tempo lento.', video: 'elevacion+de+talones+sentado+soleo+tecnica', sets: 3, repMin: 15, repMax: 20, rir: 2, restSec: 60, startLoad: 15, unit: 'kg', increment: 2.5 },
+          { key: 'j-granjero', pattern: 'caminata-granjero', photo: 'farmer-s-walk', name: 'Caminata del granjero con mancuernas', cue: 'Tu trabajo de antebrazo. Hombros atrás, abdomen apretado y pasos cortos. El agarre es lo que limita el remo y las dominadas, así que esto te hace más fuerte en todo lo demás.', video: 'caminata+del+granjero+farmer+walk+tecnica', sets: 3, repMin: 30, repMax: 45, rir: 2, restSec: 90, startLoad: 14, unit: 'kg-por-mano', increment: 2, timed: true },
+          { key: 'j-elevacion-piernas', pattern: 'crunch', photo: 'flat-bench-lying-leg-raise', name: 'Elevación de piernas tumbado', cue: 'Manos bajo los glúteos, lumbar pegada al suelo. Baja las piernas solo hasta donde puedas mantenerla pegada.', video: 'elevacion+de+piernas+tumbado+en+el+suelo+tecnica', sets: 3, repMin: 12, repMax: 15, rir: 2, restSec: 45, startLoad: 0, unit: 'peso-corporal', increment: null },
+          { key: 'j-plancha-lateral', pattern: 'plancha-lateral', photo: 'side-bridge', name: 'Plancha lateral', cue: 'Apoyo en el antebrazo, cadera bien alta y alineada. 20-30 s por lado.', video: 'plancha+lateral+tecnica+correcta', sets: 3, repMin: 20, repMax: 30, rir: 2, restSec: 45, startLoad: 0, unit: 'peso-corporal', increment: null, timed: true },
+        ],
+      },
+    ],
+  },
 };
 
 const WEEKDAYS = { Domingo: 0, Lunes: 1, Martes: 2, Miércoles: 3, Jueves: 4, Viernes: 5, Sábado: 6 };
