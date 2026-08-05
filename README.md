@@ -11,10 +11,10 @@ Sitio estático: **sin framework, sin build, sin npm**. GitHub Pages lo sirve ta
 
 - **Login con usuario y PIN.** Cada persona tiene su cuenta. El primer login necesita conexión;
   a partir de ahí la sesión y la rutina quedan cacheadas y todo funciona offline.
-- **Alta con cuestionario.** Edad, sexo, peso, altura, experiencia, días por semana y objetivo.
-  Con eso la app elige una plantilla de rutina (los mismos días y ejercicios del catálogo, con
-  RIR más alto para principiantes) y calcula las calorías con Mifflin-St Jeor. Se entrena desde
-  el minuto uno.
+- **Alta con cuestionario.** Edad, sexo, peso, altura, experiencia, días por semana, duración de
+  la sesión, otro deporte y sus días, objetivo y molestias. Con eso la app elige una plantilla del
+  catálogo y le aplica cuatro reglas independientes (ver abajo), y calcula las calorías con
+  Mifflin-St Jeor. Se entrena desde el minuto uno, sin que nadie toque el código.
 - **Superadmin.** David (`is_admin` en su fila de `users`) ve un panel de administración en
   Ajustes: entrar en la cuenta de cualquiera (ver su rutina, progreso y registros), editar su
   rutina (series, reps, RIR, descansos, cargas, añadir o quitar ejercicios del catálogo),
@@ -67,6 +67,27 @@ invertido, elevación de piernas colgado, curl femoral sentado y tríceps en pol
 node progression.test.mjs     # o: npm test
 python -m http.server 8000    # servir en local
 ```
+
+## Cómo se adapta la rutina al cuestionario
+
+Sobre la plantilla del número de días se aplican cuatro reglas **independientes** en
+`accounts.js`. Ninguna sabe de las otras, así que se pueden combinar sin que nada se rompa:
+
+| Respuesta | Qué cambia |
+|---|---|
+| **Molestia** (hombro / rodilla / lumbar) | Se quitan los patrones que la cargan (`EVITAR`). Si un día se quedara con menos de 3 ejercicios, se deja entero: media sesión no ayuda a nadie |
+| **Duración de la sesión** (30-75 min) | Tope de ejercicios por día (`MAX_EJERCICIOS`). Se recorta por los accesorios y se conserva el core, que es el finalizador |
+| **Otro deporte** (correr o bici, ≥ 2 días) | Menos series en los patrones de pierna y un punto más de RIR: la pierna ya la entrena fuera del gimnasio. Con 4 días o más, el recorte es doble |
+| **Objetivo** | Multiplicador de calorías, gramos de proteína y grasa, y los textos de estrategia de la pestaña Dieta |
+
+Y una corrección que arrastraba: **el factor de actividad va por los días TOTALES de entreno**,
+gimnasio más deporte. Antes solo contaba los del gimnasio, así que a alguien que corría tres días
+más se le calculaba el gasto de un sedentario y comía de menos sin saber por qué. En el caso de
+prueba del `progression.test.mjs` la diferencia son 600 kcal.
+
+Lo que **no** pregunta todavía y se nota: el material disponible (todo asume gimnasio con
+máquinas) y la fecha de la prueba. Añadir material significa etiquetar los 101 ejercicios del
+catálogo con lo que necesitan; la fecha solo vale la pena con periodización de verdad detrás.
 
 ## Diseño
 

@@ -137,28 +137,99 @@ const GOAL_LABEL = {
   musculo: 'ganar masa muscular',
   grasa: 'perder grasa',
   forma: 'forma física general',
+  resistencia: 'preparar una prueba de resistencia',
 };
 
-export function generateRoutine({ daysPerWeek, experience, goal }) {
+const SPORT_LABEL = {
+  correr: 'correr', bici: 'bici', natacion: 'natación', equipo: 'deporte de equipo', otro: 'otro deporte',
+};
+
+// Deportes que ya machacan la pierna. Nadar y los de equipo cargan bastante menos.
+const PIERNA_FUERA = new Set(['correr', 'bici']);
+
+// Patrones de pierna: son los que hay que recortar cuando ya se corre o se va en bici.
+const LEG = new Set(['sentadilla', 'bisagra', 'prensa', 'zancada', 'curl-femoral',
+  'extension-cuadriceps', 'gemelo', 'hip-thrust', 'abduccion']);
+
+// El core es el finalizador del día: al recortar por tiempo se conserva, se quitan accesorios.
+const CORE = new Set(['plancha', 'plancha-lateral', 'dead-bug', 'crunch', 'rueda-abdominal']);
+
+// Qué evitar según la molestia. Se quitan patrones enteros, no ejercicios sueltos: si te
+// molesta la rodilla te molesta la sentadilla, venga del día que venga.
+const EVITAR = {
+  hombro: new Set(['press-vertical', 'fondos']),
+  rodilla: new Set(['sentadilla', 'zancada']),
+  lumbar: new Set(['bisagra', 'remo-barra', 'sentadilla']),
+};
+
+// Ejercicios que caben en una sesión según lo que dure. Un ejercicio son sus series por
+// el descanso más el tiempo de ejecución; con estos números salen sesiones realistas.
+const MAX_EJERCICIOS = { 30: 4, 45: 5, 60: 6, 75: 8 };
+
+/** Recorta a `max` ejercicios conservando el core final y los básicos, que van primero. */
+function recortar(exs, max) {
+  if (exs.length <= max) return exs;
+  const core = exs.filter((e) => CORE.has(e.pattern)).slice(0, 1);
+  const resto = exs.filter((e) => !CORE.has(e.pattern));
+  return [...resto.slice(0, Math.max(1, max - core.length)), ...core];
+}
+
+/**
+ * Cuestionario → rutina. Encima de la plantilla del número de días se aplican, en este
+ * orden: quitar lo que molesta, recortar a lo que dura la sesión, y bajar el volumen de
+ * pierna de quien además corre o va en bici. Cada regla es independiente de las demás.
+ */
+export function generateRoutine(profile) {
+  const { daysPerWeek, experience, goal, sport, sportDays = 0, minutes = 60, niggle } = profile;
   const beginner = experience === 'nuevo';
   const plantilla = TEMPLATES[daysPerWeek] || TEMPLATES[3];
+  const fuera = EVITAR[niggle] || new Set();
+  const max = MAX_EJERCICIOS[minutes] || MAX_EJERCICIOS[60];
+
+  // Cuánto volumen de pierna se quita: la pierna ya la está entrenando fuera del gimnasio.
+  const recorteP = PIERNA_FUERA.has(sport) ? (sportDays >= 4 ? 2 : sportDays >= 2 ? 1 : 0) : 0;
+
+  const extra = sportDays > 0 && sport && sport !== 'ninguno'
+    ? ` · ${sportDays} d/sem de ${SPORT_LABEL[sport] || 'otro deporte'}`
+    : '';
+
   return {
-    subtitle: `${plantilla.length} días · ${GOAL_LABEL[goal] || GOAL_LABEL.forma}`,
+    subtitle: `${plantilla.length} días · ${GOAL_LABEL[goal] || GOAL_LABEL.forma}${extra}`,
     // Principiante: se entrena más lejos del fallo, como Jan.
     weekLabels: beginner ? ['4', '3', '3', '2', '4'] : ['3', '2-3', '2', '1-2', '4'],
-    days: plantilla.map(([ref, weekday]) => ({
-      ref,
-      weekday,
-      exercises: DAYS[ref].exercises.map((e) =>
-        exOverrides(e, beginner ? { rir: Math.min(3, e.rir + 1) } : {})),
-    })),
+    days: plantilla.map(([ref, weekday]) => {
+      // Nunca se baja de 3 ejercicios: una sesión de dos es una excusa, no un entreno.
+      let exs = DAYS[ref].exercises.filter((e) => !fuera.has(e.pattern));
+      if (exs.length < 3) exs = DAYS[ref].exercises;
+      exs = recortar(exs, max);
+
+      return {
+        ref,
+        weekday,
+        exercises: exs.map((e) => {
+          const pierna = LEG.has(e.pattern);
+          return exOverrides(e, {
+            ...(beginner ? { rir: Math.min(3, e.rir + 1) } : {}),
+            // En pierna, menos series y más lejos del fallo: lo que se levanta aquí tiene
+            // que dejarte entero para la salida de mañana, no al revés.
+            ...(pierna && recorteP
+              ? { sets: Math.max(2, e.sets - recorteP), rir: Math.min(4, e.rir + 1) }
+              : {}),
+          });
+        }),
+      };
+    }),
   };
 }
 
 // --- cuestionario → objetivos de dieta ----------------------------------------
 // Mifflin-St Jeor + factor de actividad por días de entreno + ajuste por objetivo.
-const ACTIVITY = { 2: 1.4, 3: 1.5, 4: 1.55, 5: 1.6 };
-const GOAL_KCAL = { musculo: 1.10, grasa: 0.80, forma: 1.00 };
+//
+// El factor va por los días TOTALES de entreno, gimnasio más deporte. Contar solo los
+// del gimnasio le calculaba a alguien que corre tres días más el gasto de un sedentario,
+// y comía de menos sin saber por qué.
+const ACTIVITY = { 0: 1.3, 1: 1.35, 2: 1.4, 3: 1.5, 4: 1.55, 5: 1.6, 6: 1.68, 7: 1.75 };
+const GOAL_KCAL = { musculo: 1.10, grasa: 0.80, forma: 1.00, resistencia: 0.92 };
 
 // ponytail: textos de estrategia solo en español; presets por objetivo, no por persona.
 const DIET_NOTES = {
@@ -177,13 +248,21 @@ const DIET_NOTES = {
     detalle: 'Comer al nivel del gasto: el objetivo es rendir en el gimnasio y consolidar el hábito, no mover la báscula.',
     proteinaNota: 'Con llegar a tu mínimo de proteína cada día es suficiente.',
   },
+  resistencia: {
+    estrategia: 'Déficit ligero con hidratos altos para llegar a la prueba',
+    detalle: 'Bajar grasa sin quedarte sin gasolina los días de carrera. Objetivo: 0,3-0,5 kg por semana, más despacio de lo normal a propósito. Los días de tirada larga come al nivel del gasto, no en déficit.',
+    proteinaNota: 'Entrenando fuerza y resistencia a la vez, la proteína es lo que evita perder músculo mientras acumulas kilómetros.',
+  },
 };
 
-export function calcTargets({ sex, age, weightKg, heightCm, daysPerWeek, goal }) {
+export function calcTargets({ sex, age, weightKg, heightCm, daysPerWeek, goal, sportDays = 0 }) {
   const bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + (sex === 'm' ? 5 : -161);
-  const kcal = Math.round((bmr * (ACTIVITY[daysPerWeek] || 1.5) * (GOAL_KCAL[goal] ?? 1)) / 50) * 50;
-  const prot = Math.round(weightKg * (goal === 'grasa' ? 2.2 : 1.8));
-  const fat = Math.round(weightKg * 0.9);
+  const dias = Math.min(7, (daysPerWeek || 3) + sportDays);
+  const kcal = Math.round((bmr * (ACTIVITY[dias] ?? 1.5) * (GOAL_KCAL[goal] ?? 1)) / 50) * 50;
+  const prot = Math.round(weightKg * (goal === 'grasa' ? 2.2 : goal === 'resistencia' ? 2 : 1.8));
+  // Con carga de resistencia se baja la grasa para dejar sitio a los hidratos, que son
+  // los que sostienen las tiradas largas.
+  const fat = Math.round(weightKg * (goal === 'resistencia' ? 0.8 : 0.9));
   const carb = Math.max(0, Math.round((kcal - 4 * prot - 9 * fat) / 4));
   return { kcal, prot, fat, carb, ...(DIET_NOTES[goal] || DIET_NOTES.forma) };
 }

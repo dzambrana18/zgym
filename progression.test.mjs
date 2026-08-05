@@ -118,9 +118,17 @@ for (const [uk, user] of Object.entries(USERS)) {
   assert.ok(user.days.length >= 4 && user.days.length <= 6, `${uk}: ${user.days.length} días`);
   const wd = user.days.map((d) => d.weekday);
   assert.equal(new Set(wd).size, wd.length, `${uk}: dos sesiones el mismo día de la semana`);
+  // Un mismo ejercicio SÍ puede estar en dos días: Jan repite la sesión de empuje el
+  // lunes y el jueves, y comparten progresión a propósito (el histórico va por clave de
+  // ejercicio, no por día). Lo que no puede es repetirse dentro del MISMO día, porque
+  // eso rompería el selector [data-ex] y la tabla de series.
+  for (const d of user.days) {
+    const enDia = d.exercises.map((e) => e.key);
+    assert.equal(new Set(enDia).size, enDia.length, `${uk}/${d.key}: ejercicio repetido el mismo día`);
+  }
   const keys = new Set();
   for (const ex of allExercises(uk)) {
-    assert.ok(!keys.has(ex.key), `${uk}: clave duplicada ${ex.key}`);
+    if (keys.has(ex.key)) continue;   // ya validado desde el otro día
     keys.add(ex.key);
     assert.ok(ex.name && ex.cue && ex.video, `${uk}/${ex.key}: falta texto`);
     assert.ok(ex.sets > 0 && ex.repMin > 0 && ex.repMax >= ex.repMin, `${uk}/${ex.key}: rango de reps inválido`);
@@ -154,11 +162,16 @@ for (const [uk, user] of Object.entries(USERS)) {
     assert.ok(resto.every((e) => CORE.has(e.pattern)),
       `${uk}/${d.key}: hay ejercicios que no son de core después del primero de core`);
   }
-  assert.ok(diasConCore >= 3, `${uk}: solo ${diasConCore} días con core, hacen falta 3`);
+  // El mínimo era 3 días. Jan pidió quitar la plancha del lunes y el dead bug del
+  // martes, y con el jueves siendo copia del lunes se queda en 2 días (miércoles y
+  // viernes), aunque son 3 ejercicios de core. Se baja el mínimo a 2 en vez de
+  // devolverle ejercicios que ha pedido quitar: la decisión es suya, no del programa.
+  assert.ok(diasConCore >= 2, `${uk}: solo ${diasConCore} días con core, hacen falta 2`);
 }
 assert.equal(allExercises('anna').length, 33, 'Anna: 33 ejercicios');
 assert.equal(allExercises('david').length, 32, 'David: 32 ejercicios');
-assert.equal(allExercises('jan').length, 37, 'Jan: 37 ejercicios');
+// El lunes y el jueves son la misma sesión, así que sus 6 ejercicios se cuentan dos veces.
+assert.equal(allExercises('jan').length, 36, 'Jan: 36 ejercicios');
 
 // Material que el gimnasio no tiene: no debe quedar ni rastro
 const todos = Object.keys(USERS).flatMap((u) => allExercises(u));
@@ -237,6 +250,42 @@ assert.deepEqual(Object.keys(MOVES).filter((k) => !usados.has(k)), [], 'patrones
   assert.ok(d2.carb > 0 && d2.fat > 0 && d2.estrategia && d2.detalle && d2.proteinaNota);
   assert.ok(d1.kcal < calcTargets({ sex: 'm', age: 30, weightKg: 80, heightCm: 180, daysPerWeek: 4, goal: 'musculo' }).kcal,
     'perder grasa da menos kcal que ganar músculo');
+
+  // --- adaptación por deporte, tiempo y molestias -------------------------
+  // Caso real: 3 días de gimnasio, corre 3 más, quiere bajar grasa y llegar a una
+  // prueba en octubre. Antes esto daba exactamente la misma rutina y las mismas
+  // calorías que alguien que solo pisa el gimnasio.
+  const trail = { age: 32, sex: 'm', weightKg: 78, heightCm: 178, experience: 'medio',
+    daysPerWeek: 3, goal: 'resistencia', minutes: 60, sport: 'correr', sportDays: 3, niggle: 'ninguna' };
+  const soloGym = { ...trail, sport: 'ninguno', sportDays: 0, goal: 'grasa' };
+
+  const rTrail = resolveRoutine({ routine: generateRoutine(trail) });
+  const rGym = resolveRoutine({ routine: generateRoutine(soloGym) });
+  const LEG = new Set(['sentadilla', 'bisagra', 'prensa', 'zancada', 'curl-femoral',
+    'extension-cuadriceps', 'gemelo', 'hip-thrust', 'abduccion']);
+  const seriesPierna = (r) => r.days.flatMap((d) => d.exercises)
+    .filter((e) => LEG.has(e.pattern)).reduce((n, e) => n + e.sets, 0);
+  assert.ok(seriesPierna(rTrail) < seriesPierna(rGym),
+    `quien corre lleva menos series de pierna: ${seriesPierna(rTrail)} vs ${seriesPierna(rGym)}`);
+  assert.ok(rTrail.subtitle.includes('correr'), 'el subtítulo dice que corre');
+
+  // Las kcal tienen que contar los días de deporte, no solo los de gimnasio
+  const kTrail = calcTargets(trail).kcal;
+  const kSinDeporte = calcTargets({ ...trail, sportDays: 0 }).kcal;
+  assert.ok(kTrail > kSinDeporte, `correr 3 días sube el gasto: ${kTrail} vs ${kSinDeporte}`);
+
+  // Sesión de 30 min: menos ejercicios por día, pero nunca menos de tres
+  const corto = resolveRoutine({ routine: generateRoutine({ ...trail, minutes: 30 }) });
+  for (const d of corto.days) {
+    assert.ok(d.exercises.length >= 3 && d.exercises.length <= 4,
+      `sesión de 30 min: ${d.key} tiene ${d.exercises.length} ejercicios`);
+  }
+
+  // Una molestia quita los patrones que la cargan, sin dejar el día vacío
+  const rodilla = resolveRoutine({ routine: generateRoutine({ ...trail, minutes: 75, niggle: 'rodilla' }) });
+  const patrones = rodilla.days.flatMap((d) => d.exercises.map((e) => e.pattern));
+  assert.ok(!patrones.includes('sentadilla'), 'con molestia de rodilla no hay sentadilla');
+  for (const d of rodilla.days) assert.ok(d.exercises.length >= 3, `${d.key} se quedó corto`);
 
   console.log('   cuentas: plantillas, generador y calorías OK');
 }

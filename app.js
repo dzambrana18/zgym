@@ -14,7 +14,7 @@ import {
 // Versión de esta copia de la app. Va emparejada con version.json, que se sirve
 // SIEMPRE desde la red: si no coinciden es que el móvil tiene una copia vieja
 // cacheada. progression.test.mjs comprueba que las dos no se desincronicen.
-export const VERSION = '1.4.0';
+export const VERSION = '1.5.0';
 
 const app = document.getElementById('app');
 const state = { user: db.getUser(), view: 'home', dayKey: null, open: null, exKey: null, meal: null, override: {}, draft: {} };
@@ -261,20 +261,40 @@ function viewSignup() {
       </label>
     </div>
 
-    <div class="sec-title">${t('suQuizKicker')}</div>
+    <div class="sec-title">${t('suAboutYou')}</div>
     <div class="sec">
       ${num('su-age', t('suAge'), 14, 90)}
       ${sel('su-sex', t('suSex'), [['f', t('suSexF')], ['m', t('suSexM')]])}
       ${num('su-weight', t('fieldWeight'), 30, 250)}
       ${num('su-height', t('suHeight'), 120, 230)}
+    </div>
+
+    <div class="sec-title">${t('suTraining')}</div>
+    <div class="sec">
       ${sel('su-exp', t('suExp'), [['nuevo', t('suExp0')], ['medio', t('suExp1')], ['avanzado', t('suExp2')]])}
       ${sel('su-days', t('suDays'), [['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']])}
-      ${sel('su-goal', t('suGoal'), [['musculo', t('suGoalMuscle')], ['grasa', t('suGoalFat')], ['forma', t('suGoalFit')]])}
-      <button class="btn primary wide" id="su-go" style="margin-top:10px">${t('suCreate')}</button>
+      ${sel('su-min', t('suMinutes'), [['30', t('suMin30')], ['45', t('suMin45')], ['60', t('suMin60')], ['75', t('suMin75')]])}
+      ${sel('su-sport', t('suSport'), [['ninguno', t('suSportNone')], ['correr', t('suSportRun')],
+        ['bici', t('suSportBike')], ['natacion', t('suSportSwim')], ['equipo', t('suSportTeam')], ['otro', t('suSportOther')]])}
+      <div id="su-sportdays-wrap" hidden>
+        ${sel('su-sportdays', t('suSportDays'), [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6']])}
+      </div>
+      ${sel('su-goal', t('suGoal'), [['musculo', t('suGoalMuscle')], ['grasa', t('suGoalFat')],
+        ['forma', t('suGoalFit')], ['resistencia', t('suGoalRace')]])}
+      ${sel('su-niggle', t('suNiggle'), [['ninguna', t('suNiggleNone')], ['hombro', t('suNiggleShoulder')],
+        ['rodilla', t('suNiggleKnee')], ['lumbar', t('suNiggleBack')]])}
+      <p class="muted" style="font-size:13px;margin:-4px 0 18px">${t('suNiggleNote')}</p>
+      <button class="btn primary wide" id="su-go">${t('suCreate')}</button>
     </div>`;
 
   const $ = (id) => document.getElementById(id);
   $('su-days').value = '3';
+  $('su-min').value = '60';
+  $('su-sportdays').value = '3';
+  // Los días de deporte solo tienen sentido si hace alguno: preguntar "0 días de ninguno"
+  // es ruido en un formulario que ya es largo.
+  const sportWrap = $('su-sportdays-wrap');
+  $('su-sport').onchange = () => { sportWrap.hidden = $('su-sport').value === 'ninguno'; };
   // Sugerencia de username a partir del nombre, solo mientras no lo hayan tocado
   let userTouched = false;
   $('su-user').oninput = () => { userTouched = true; };
@@ -282,9 +302,12 @@ function viewSignup() {
 
   $('su-go').onclick = async () => {
     const nv = (id) => Number($(id).value);
+    const sport = $('su-sport').value;
     const profile = {
       age: nv('su-age'), sex: $('su-sex').value, weightKg: nv('su-weight'), heightCm: nv('su-height'),
       experience: $('su-exp').value, daysPerWeek: nv('su-days'), goal: $('su-goal').value,
+      minutes: nv('su-min'), sport, sportDays: sport === 'ninguno' ? 0 : nv('su-sportdays'),
+      niggle: $('su-niggle').value,
     };
     if (!$('su-name').value.trim()) { toast(t('suNeedName')); return; }
     if (!(profile.age >= 14 && profile.age <= 90) || !(profile.weightKg >= 30 && profile.weightKg <= 250)
@@ -681,8 +704,15 @@ function wireDay(u, day, week, today) {
  * Lectura del histórico en lenguaje llano: qué sube, qué está parado y cuánto entrenas.
  * Es lo que sirve para decidir si hay que tocar el plan.
  */
+/**
+ * Ejercicios de la rutina sin repetir. Un mismo ejercicio puede estar en dos días (Jan
+ * hace la misma sesión de empuje lunes y jueves), y su histórico es uno solo: contarlo
+ * dos veces inflaría el resumen y lo duplicaría en el selector de Progreso.
+ */
+const uniqueExercises = (user) => [...new Map(allExercises(user).map((e) => [e.key, e])).values()];
+
 function summarize(u, user) {
-  const list = allExercises(user);
+  const list = uniqueExercises(user);
   const sets = db.getSets(u).filter((s) => s.reps > 0);
   const dates = [...new Set(sets.map((s) => s.loggedAt))].sort();
 
@@ -745,7 +775,7 @@ function viewSummary(u, user) {
 
 function viewProgress() {
   const { u, user } = ctx();
-  const list = allExercises(user);
+  const list = uniqueExercises(user);
   if (list.length === 0) { state.view = 'home'; return render(); }
   const key = state.exKey && list.some((e) => e.key === state.exKey) ? state.exKey : list[0].key;
   state.exKey = key;
@@ -762,14 +792,23 @@ function viewProgress() {
     y: ses.sets.reduce((n, s) => n + (s.weight || 0) * (s.reps || 0), 0),
   })).filter((p) => p.y > 0);
 
+  // El selector agrupa por día, pero un ejercicio que está en dos días se lista una
+  // sola vez, en el primero donde aparece. Un día que se queda sin nada propio no sale.
+  const vistos = new Set();
+  const grupos = user.days.map((d) => {
+    const exs = d.exercises.filter((e) => !vistos.has(e.key));
+    exs.forEach((e) => vistos.add(e.key));
+    return { d, exs };
+  }).filter((g) => g.exs.length > 0);
+
   app.innerHTML = `
     ${lead(t('tabProgress'), user.name)}
     ${viewSummary(u, user)}
 
     <div class="sec-title">${t('e1rmKicker')}</div>
     <select class="picker" id="ex-pick">
-      ${user.days.map((d) => `<optgroup label="${esc(dayName(d))}">
-        ${d.exercises.map((e) => `<option value="${e.key}" ${e.key === key ? 'selected' : ''}>${esc(exName(e))}</option>`).join('')}
+      ${grupos.map(({ d, exs }) => `<optgroup label="${esc(dayName(d))}">
+        ${exs.map((e) => `<option value="${e.key}" ${e.key === key ? 'selected' : ''}>${esc(exName(e))}</option>`).join('')}
       </optgroup>`).join('')}
     </select>
 

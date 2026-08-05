@@ -103,6 +103,13 @@ export const MOVES = {
     a: S('M40 31 V56') + S('M60 31 V56') + DB(40, 58) + DB(60, 58),
     b: S('M40 31 L37 47 L42 35') + S('M60 31 L63 47 L58 35') + DB(42, 33) + DB(58, 33),
   },
+  // Sentado, antebrazo apoyado en el muslo y la mano por fuera de la rodilla: solo se
+  // mueve la muñeca, así que el recorrido es corto a propósito.
+  'curl-muneca': {
+    base: C(34, 22, 6.5) + S('M34 29 V50') + S('M34 50 H62') + S('M62 50 V80') + S('M34 50 L26 62'),
+    a: S('M40 44 H70') + BAR(62, 62, 82),
+    b: S('M40 44 H70') + BAR(54, 62, 82),
+  },
   'extension-triceps': {
     base: S('M84 8 V86') + C(84, 14, 4) + C(44, 24, 6.5) + S('M44 31 V60') + S('M44 60 L36 86') + S('M44 60 L52 86'),
     a: S('M50 34 L55 46 L49 35') + S('M50 34 L84 20'),

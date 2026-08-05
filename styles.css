@@ -272,7 +272,14 @@ input[type="number"], input[type="date"] {
 .now:active { opacity: 0.72; }
 .now.shot {
   position: relative; overflow: hidden;
-  margin: 6px calc(var(--pad) * -1) 0;     /* a sangre: rompe el margen de #app */
+  /* A sangre: rompe el margen lateral de #app.
+     El ancho va sumado a mano y el desplazamiento en un solo margen negativo. No sirve
+     `margin: 0 -20px` con el ancho en 100% ni en auto: un ancho que no sea auto se
+     DESPLAZA en vez de ensancharse (se saldría 20px por la izquierda y se quedaría 20px
+     corto por la derecha), y en un <button> el navegador resuelve `auto` como ajuste al
+     contenido, no como estirar. De ahí venía el hueco a la derecha en el iPhone. */
+  width: calc(100% + var(--pad) * 2);
+  margin: 6px 0 0 calc(var(--pad) * -1);
   padding: 0; border-bottom: 0;
   min-height: 340px;
   display: flex; align-items: flex-end;
