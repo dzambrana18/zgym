@@ -235,7 +235,7 @@ export const EN = {
     blockCurrent: 'in progress, week {0} of 4',
     blockToday: 'today',
     blockRange: '{0} → {1} · {2} sessions, {3} sets',
-    blockNone: 'Block {0} will start on its own, with the first set you log.',
+    blockStarts1: 'You are already in week 1. Your first set will set the start date.',
     blockAutoNote: 'Blocks count themselves from your first session: four weeks each, and the next one starts with the first session you log afterwards. Nothing to configure, and nothing from the previous block is deleted.',
     blockNewTitle: 'Block {0} under way.',
     blockNewBody: 'Block {0} closed: {1} to {2}, {3} sessions and {4} sets. It is all still in Settings. The new one started with your session on {5}.',

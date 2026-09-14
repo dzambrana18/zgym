@@ -235,7 +235,7 @@ export const CA = {
     blockCurrent: 'en curs, setmana {0} de 4',
     blockToday: 'avui',
     blockRange: '{0} → {1} · {2} sessions, {3} sèries',
-    blockNone: 'El bloc {0} començarà sol, amb la primera sèrie que anotis.',
+    blockStarts1: 'Ja ets a la setmana 1. La data d’inici la posarà la teva primera sèrie.',
     blockAutoNote: "Els blocs es compten sols des del teu primer entrenament: quatre setmanes cadascun, i el següent arrenca amb la primera sessió que registris després. No hi ha res a configurar i no s'esborra res de l'anterior.",
     blockNewTitle: 'Bloc {0} en marxa.',
     blockNewBody: "El bloc {0} s'ha tancat: del {1} al {2}, {3} sessions i {4} sèries. El tens sencer a Ajustos. El nou ha començat amb el teu entrenament del {5}.",

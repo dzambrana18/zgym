@@ -441,7 +441,7 @@ function viewHome() {
           .map((w) => `<i class="meso-seg ${w < week ? 'done' : w === week ? 'cur' : ''}"></i>`).join('')}</span>
         <span class="meso-n">${week}<em>/4</em></span>
       </div>
-      <p class="meso-hint">${pendiente || !starts.length ? t('blockNone', starts.length + 1)
+      <p class="meso-hint">${pendiente ? t('blockStarts1')
         : week === 1 ? t('hintWeek1')
         : week === 3 ? t('hintWeek3')
         : week === 4 ? t('hintWeek4')
@@ -1057,7 +1057,14 @@ function viewSettings() {
 
     <div class="sec-title">${t('mesoKicker')}</div>
     <div class="list">
-      ${pendiente || !starts.length ? `<div class="row-i static"><span class="row-i-main"><strong>${t('blockNone', starts.length + 1)}</strong></span></div>` : ''}
+      ${/* El bloque en curso sale aunque todavía no tenga ninguna sesión: se está
+            entrenando ya, y su fecha de inicio la pondrá el primer registro. */''}
+      ${(pendiente || !starts.length) ? `<div class="row-i static">
+        <span class="row-i-main">
+          <strong>${t('blockN', starts.length + 1)} · ${t('blockCurrent', week)}</strong>
+          <small>${t('blockStarts1')}</small>
+        </span>
+      </div>` : ''}
       ${starts.map((_, i) => {
         const b = blockSummary(u, starts, i);
         const f = (iso) => new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });

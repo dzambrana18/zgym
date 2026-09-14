@@ -328,7 +328,7 @@ export const UI_ES = {
   blockCurrent: 'en curso, semana {0} de 4',
   blockToday: 'hoy',
   blockRange: '{0} → {1} · {2} sesiones, {3} series',
-  blockNone: 'El bloque {0} empezará solo, con la primera serie que anotes.',
+  blockStarts1: 'Ya estás en la semana 1. La fecha de inicio la pondrá tu primera serie.',
   blockAutoNote: 'Los bloques se cuentan solos desde tu primer entreno: cuatro semanas cada uno, y el siguiente arranca con la primera sesión que registres después. No hay nada que configurar y no se borra nada del anterior.',
   blockNewTitle: 'Bloque {0} en marcha.',
   blockNewBody: 'El bloque {0} se cerró: del {1} al {2}, {3} sesiones y {4} series. Sigue entero en Ajustes. El nuevo empezó con tu entreno del {5}.',
