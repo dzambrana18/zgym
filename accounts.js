@@ -91,7 +91,8 @@ export function resolveRoutine(row) {
     name: row?.name || '',
     remoteKey: row?.remote_key,
     subtitle: r.subtitle || '',
-    weekLabels: r.weekLabels || ['3', '2-3', '2', '1-2', '4'],
+    weekLabels: r.weekLabels || ['3', '2-3', '2', '1-2'],
+    blockFrom: r.blockFrom || null,
     days: (r.days || []).map((d) => ({
       ...(DAYS[d.ref] || {}),
       ...d,
@@ -108,7 +109,7 @@ export function resolveRoutine(row) {
 /** Los campos numéricos editables de un ejercicio, referenciando el catálogo. */
 export const exOverrides = (e, extra = {}) => ({
   ref: e.key, sets: e.sets, repMin: e.repMin, repMax: e.repMax, rir: e.rir,
-  restSec: e.restSec, startLoad: e.startLoad, increment: e.increment, ...extra,
+  restSec: e.restSec, startLoad: e.startLoad, increment: e.increment, reset: e.reset, ...extra,
 });
 
 /** Rutina resuelta (p. ej. una builtin) → JSON con refs, para poder editarla. */
@@ -116,6 +117,7 @@ export function materialize(user) {
   return {
     subtitle: user.subtitle,
     weekLabels: user.weekLabels,
+    blockFrom: user.blockFrom,
     days: user.days.map((d) => ({
       ref: d.key,
       weekday: d.weekday,
@@ -196,7 +198,7 @@ export function generateRoutine(profile) {
   return {
     subtitle: `${plantilla.length} días · ${GOAL_LABEL[goal] || GOAL_LABEL.forma}${extra}`,
     // Principiante: se entrena más lejos del fallo, como Jan.
-    weekLabels: beginner ? ['4', '3', '3', '2', '4'] : ['3', '2-3', '2', '1-2', '4'],
+    weekLabels: beginner ? ['4', '3', '3', '2'] : ['3', '2-3', '2', '1-2'],
     days: plantilla.map(([ref, weekday]) => {
       // Nunca se baja de 3 ejercicios: una sesión de dos es una excusa, no un entreno.
       let exs = DAYS[ref].exercises.filter((e) => !fuera.has(e.pattern));

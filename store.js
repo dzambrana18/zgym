@@ -25,7 +25,7 @@ const K = {
   accounts: 'gym.accounts',
   sets: (u) => `gym.${u}.sets`,
   body: (u) => `gym.${u}.body`,
-  meso: (u) => `gym.${u}.mesocycleStart`,
+  blocksSeen: (u) => `gym.${u}.blocksSeen`,
   queue: 'gym.pendingSync',
   lastSync: 'gym.lastSync',
 };
@@ -128,16 +128,19 @@ export async function deleteUserRow(username) {
   await usersFetch(`?username=eq.${encodeURIComponent(username)}`, { method: 'DELETE' });
 }
 
-// --- mesociclo -------------------------------------------------------------
-export function getMesocycleStart(u) {
-  let s = read(K.meso(u), null);
-  if (!s) {
-    s = todayISO();
-    write(K.meso(u), s);
-  }
-  return s;
-}
-export const setMesocycleStart = (u, iso) => write(K.meso(u), iso);
+// --- bloques ---------------------------------------------------------------
+// El inicio del mesociclo NO se guarda: se deduce de las series anotadas (ver
+// blockStarts en progression.js). Antes era una fecha en localStorage que había que
+// poner a mano, no se sincronizaba y nadie la tocaba, así que la app acababa contando
+// semanas que no se correspondían con nada.
+
+/** Fechas con entreno de verdad, únicas y ordenadas. Es la fuente de los bloques. */
+export const trainingDates = (u) =>
+  [...new Set(getSets(u).filter((s) => s.reps > 0).map((s) => s.loggedAt))].sort();
+
+/** Cuántos bloques ha visto ya el usuario, para avisar solo una vez de cada uno. */
+export const getBlocksSeen = (u) => read(K.blocksSeen(u), 0);
+export const setBlocksSeen = (u, n) => write(K.blocksSeen(u), n);
 
 // --- series ----------------------------------------------------------------
 export const getSets = (u) => read(K.sets(u), []);
@@ -336,13 +339,13 @@ export async function pullFromCloud(remoteKeys) {
 export function exportAll() {
   // Lista dinámica: cualquier usuario con datos guardados en este móvil entra en la copia.
   const users = [...new Set(
-    Object.keys(localStorage).map((k) => /^gym\.(.+)\.(sets|body|mesocycleStart)$/.exec(k)?.[1]).filter(Boolean)
+    Object.keys(localStorage).map((k) => /^gym\.(.+)\.(sets|body)$/.exec(k)?.[1]).filter(Boolean)
   )];
   return {
     exportedAt: new Date().toISOString(),
-    version: 1,
+    version: 2,
     data: Object.fromEntries(
-      users.map((u) => [u, { sets: getSets(u), body: read(K.body(u), []), mesocycleStart: read(K.meso(u), null) }])
+      users.map((u) => [u, { sets: getSets(u), body: read(K.body(u), []) }])
     ),
   };
 }
@@ -352,6 +355,6 @@ export function importAll(payload) {
   for (const [u, d] of Object.entries(payload.data)) {
     if (Array.isArray(d.sets)) write(K.sets(u), d.sets);
     if (Array.isArray(d.body)) write(K.body(u), d.body);
-    if (d.mesocycleStart) write(K.meso(u), d.mesocycleStart);
+    // Las copias v1 traían mesocycleStart; ya no se usa, los bloques salen de las series.
   }
 }

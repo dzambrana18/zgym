@@ -8,13 +8,13 @@ import {
 } from './i18n.js';
 import * as db from './store.js';
 import {
-  mesocycleWeek, isDeload, targetRir, effectiveSets, e1rm, groupSessions, suggest, fmt,
+  mesocycleWeek, blockStarts, targetRir, effectiveSets, e1rm, groupSessions, suggest, fmt,
 } from './progression.js';
 
 // Versión de esta copia de la app. Va emparejada con version.json, que se sirve
 // SIEMPRE desde la red: si no coinciden es que el móvil tiene una copia vieja
 // cacheada. progression.test.mjs comprueba que las dos no se desincronicen.
-export const VERSION = '1.5.0';
+export const VERSION = '1.6.0';
 
 const app = document.getElementById('app');
 const state = { user: db.getUser(), view: 'home', dayKey: null, open: null, exKey: null, meal: null, override: {}, draft: {} };
@@ -134,9 +134,26 @@ function ctx() {
   // La rutina sale de la fila de cuenta cacheada: builtin (anna/david/jan, viven en
   // routines.js) o JSON con refs al catálogo (usuarios creados desde la app).
   const user = resolveRoutine(db.getAccount(u));
-  const start = db.getMesocycleStart(u);
-  const week = mesocycleWeek(start, db.todayISO());
-  return { u, user, start, week };
+  // El bloque no se configura: se deduce de las series anotadas. Cuando la rutina cambia
+  // (user.blockFrom) el bloque en curso se cierra y el siguiente queda PENDIENTE hasta
+  // que haya un entreno de verdad: mientras tanto se enseña la semana 1 como adelanto.
+  const starts = blockStarts(db.trainingDates(u), user.blockFrom);
+  const pendiente = Boolean(user.blockFrom) && (starts.at(-1) || '') < user.blockFrom;
+  const start = pendiente ? null : starts.at(-1) || null;
+  const week = start ? mesocycleWeek(start, db.todayISO()) : 1;
+  // Los bloques ya cerrados antes de esta versión no se anuncian: el aviso es para los
+  // que se abren con la app en marcha, no para dar la bienvenida al pasado.
+  if (db.getBlocksSeen(u) === 0 && starts.length) db.setBlocksSeen(u, starts.length);
+  return { u, user, starts, start, week, pendiente };
+}
+
+/** Resumen de un bloque cerrado (o del que está en curso), para avisos y ajustes. */
+function blockSummary(u, starts, i) {
+  const desde = starts[i];
+  const hasta = starts[i + 1] || null;   // null = bloque en curso
+  const sets = db.getSets(u).filter((s) => s.reps > 0 && s.loggedAt >= desde && (!hasta || s.loggedAt < hasta));
+  const dias = [...new Set(sets.map((s) => s.loggedAt))].sort();
+  return { desde, hasta, fin: dias.at(-1) || desde, sesiones: dias.length, series: sets.length };
 }
 
 /**
@@ -368,9 +385,25 @@ function nowCard(u, user, week) {
   </button>`;
 }
 
+/**
+ * Aviso de bloque nuevo. Salta una sola vez por bloque: en cuanto se cierra, se guarda
+ * cuántos bloques ha visto el usuario. Enseña el resumen del anterior porque el dato del
+ * bloque cerrado es justo lo que se pierde de vista al empezar el siguiente.
+ */
+function blockNotice(u, starts) {
+  const n = starts.length;
+  if (n < 2 || db.getBlocksSeen(u) >= n) return '';
+  const prev = blockSummary(u, starts, n - 2);
+  const f = (iso) => new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
+  return `<div class="note new-block" id="block-notice">
+    <strong>${t('blockNewTitle', n)}</strong>
+    ${t('blockNewBody', n - 1, f(prev.desde), f(prev.fin), prev.sesiones, prev.series, f(starts[n - 1]))}
+    <button class="btn-inline" id="block-ok">${t('blockOk')}</button>
+  </div>`;
+}
+
 function viewHome() {
-  const { u, user, week } = ctx();
-  const dl = isDeload(week);
+  const { u, user, week, starts, pendiente } = ctx();
   const hoy = todaysDay(user);
   const lastBody = db.getBody(u).at(-1);
   const lunes = weekStartISO();
@@ -383,6 +416,7 @@ function viewHome() {
 
   app.innerHTML = `
     ${lead(user.name, userSubtitle(u, user))}
+    ${blockNotice(u, starts)}
     ${nowCard(u, user, week)}
 
     <div class="wk">
@@ -400,14 +434,15 @@ function viewHome() {
       </div>
     </div>
 
-    <div class="meso ${dl ? 'deload' : ''}">
+    <div class="meso">
       <div class="meso-row">
-        <span class="meso-rir">${t('mesoWeek')}</span>
-        <span class="meso-track" aria-hidden="true">${[1, 2, 3, 4, 5]
+        <span class="meso-rir">${t('blockN', starts.length + (pendiente ? 1 : 0) || 1)}</span>
+        <span class="meso-track" aria-hidden="true">${[1, 2, 3, 4]
           .map((w) => `<i class="meso-seg ${w < week ? 'done' : w === week ? 'cur' : ''}"></i>`).join('')}</span>
-        <span class="meso-n">${week}<em>/5</em></span>
+        <span class="meso-n">${week}<em>/4</em></span>
       </div>
-      <p class="meso-hint">${dl ? t('hintDeload')
+      <p class="meso-hint">${pendiente || !starts.length ? t('blockNone', starts.length + 1)
+        : week === 1 ? t('hintWeek1')
         : week === 3 ? t('hintWeek3')
         : week === 4 ? t('hintWeek4')
         : t('hintDefault')} · RIR ${esc(user.weekLabels[week - 1])}</p>
@@ -447,6 +482,8 @@ function viewHome() {
     b.onclick = () => { state.dayKey = b.dataset.day; state.view = 'day'; state.open = null; state.override = {}; state.draft = {}; render(); };
   });
   app.querySelector('[data-go="body"]').onclick = () => { state.view = 'body'; render(); };
+  const ok = document.getElementById('block-ok');
+  if (ok) ok.onclick = () => { db.setBlocksSeen(u, starts.length); render(); };
   wireTabs('home');
 }
 
@@ -557,7 +594,6 @@ function viewDay() {
   app.innerHTML = `
     ${nav(dayName(day), `${daySubtitle(day)} · ${t('mesoWeek')} ${week} · RIR ${user.weekLabels[week - 1]}`)}
     ${avisoDia}
-    ${isDeload(week) ? `<div class="note warn"><strong>${t('deloadTitle')}</strong> ${t('deloadBody')}</div>` : ''}
     <div id="ex-list">${day.exercises.map((ex, i) => exerciseCard(u, day, ex, i, week, today)).join('')}</div>
     <details class="blk">
       <summary>${t('warmup')}</summary>
@@ -976,7 +1012,7 @@ function viewDiet() {
 }
 
 function viewSettings() {
-  const { u, user, start, week } = ctx();
+  const { u, user, starts, week, pendiente } = ctx();
   const pend = db.pendingCount();
   const last = db.getLastSync();
 
@@ -1021,20 +1057,20 @@ function viewSettings() {
 
     <div class="sec-title">${t('mesoKicker')}</div>
     <div class="list">
-      <div class="row-i static">
-        <span class="row-i-main">
-          <strong>${t('mesoState', week,
-            new Date(start).toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' }))}</strong>
-        </span>
-      </div>
-      <label class="row-i" for="meso">
-        <span class="row-i-main"><strong>${t('mesoStart')}</strong></span>
-        <input type="date" id="meso" value="${start}" class="date-in">
-      </label>
-      <button class="row-i" id="reset-meso">
-        <span class="row-i-main"><strong>${t('mesoReset')}</strong></span>
-      </button>
+      ${pendiente || !starts.length ? `<div class="row-i static"><span class="row-i-main"><strong>${t('blockNone', starts.length + 1)}</strong></span></div>` : ''}
+      ${starts.map((_, i) => {
+        const b = blockSummary(u, starts, i);
+        const f = (iso) => new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
+        const enCurso = i === starts.length - 1 && !pendiente;
+        return `<div class="row-i static">
+          <span class="row-i-main">
+            <strong>${t('blockN', i + 1)}${enCurso ? ` · ${t('blockCurrent', week)}` : ''}</strong>
+            <small>${t('blockRange', f(b.desde), enCurso ? t('blockToday') : f(b.fin), b.sesiones, b.series)}</small>
+          </span>
+        </div>`;
+      }).reverse().join('')}
     </div>
+    <div class="note">${t('blockAutoNote')}</div>
 
     ${db.getAccount(db.getUser())?.is_admin ? `<div class="sec-title">${t('adminKicker')}</div>
     <div class="list">
@@ -1093,14 +1129,6 @@ function viewSettings() {
     }
   };
 
-  document.getElementById('meso').onchange = (e) => {
-    if (e.target.value) { db.setMesocycleStart(u, e.target.value); render(); }
-  };
-  document.getElementById('reset-meso').onclick = () => {
-    db.setMesocycleStart(u, db.todayISO());
-    toast(t('mesoResetDone'));
-    render();
-  };
   document.getElementById('logout').onclick = () => {
     // Solo cierra la sesión: los datos y la cuenta cacheada se quedan, así el
     // siguiente login del mismo usuario funciona incluso sin cobertura.

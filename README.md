@@ -26,11 +26,23 @@ Sitio estático: **sin framework, sin build, sin npm**. GitHub Pages lo sirve ta
 - **Registro de series** con peso, repeticiones y RIR. Al marcar una serie arranca el temporizador de descanso.
 - **Sugerencia de carga** por doble progresión: cuando completas el tope del rango de repeticiones en
   todas las series y con margen, sube el peso el incremento del ejercicio. Si no, repite y suma una repetición.
-  Siempre dice *por qué* y muestra qué hiciste la última vez.
+  Siempre dice *por qué* y muestra qué hiciste la última vez. Un ejercicio puede llevar `reset` con una
+  fecha: el histórico anterior deja de contar y se vuelve a la carga inicial del plan, que es la única
+  forma de romper una meseta larga sin que la sugerencia siga sacando el peso de la última sesión.
 - **Demostración de técnica** en cada ejercicio: dos fotos reales (posición inicial y final) que se
   alternan como un GIF, más el enlace a vídeos de YouTube.
-- **Mesociclo de 5 semanas**: la semana 3 añade una serie al primer ejercicio de cada sesión y la
-  semana 5 es descarga (mitad de series, RIR 4, mismo peso).
+- **Bloque de 4 semanas, sin descarga**: el RIR objetivo baja de la semana 1 a la 4 (la 1 es la
+  suave y hace de recuperación) y la semana 3 añade una serie al primer ejercicio de cada sesión.
+  Antes había una quinta semana de descarga; se quitó en la v1.6.0 porque en cinco semanas de datos
+  reales nadie la llegó a hacer.
+- **Los bloques se cuentan solos** (v1.6.0): no hay fecha de inicio que configurar. El bloque 1
+  empieza el día de la primera serie anotada y cada bloque siguiente arranca con la primera sesión
+  que caiga a partir de los 28 días — si te vas de vacaciones, el bloque te espera en vez de correr
+  solo. Cuando se abre uno nuevo la app lo avisa con el resumen del anterior, y los bloques cerrados
+  siguen enteros en Ajustes: no se borra nada. Antes era una fecha a mano en `localStorage` que no
+  se sincronizaba y que nadie tocaba, así que la app contaba semanas que no se correspondían con
+  nada. Si la rutina cambia, `routine.blockFrom` cierra el bloque en curso y el siguiente empieza
+  con el primer entreno posterior a esa fecha.
 - **Progreso** con un resumen en lenguaje llano (qué sube, qué está parado, cuánto entrenas), 1RM
   estimado (Epley), tonelaje por sesión y seguimiento de peso corporal y cintura.
 - **Dieta** con objetivo calórico por persona, día de ejemplo que cuadra con ese objetivo, y 20

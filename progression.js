@@ -1,20 +1,44 @@
-// Doble progresión, mesociclo de 5 semanas y e1RM. Funciones puras, sin DOM ni almacenamiento.
+// Doble progresión, bloque de 4 semanas y e1RM. Funciones puras, sin DOM ni almacenamiento.
 // La regla es la de la sección 06 de los dos PDFs: te mueves dentro del rango de repeticiones
 // hasta tocar el techo y solo entonces subes peso.
 
-// Offset de RIR por semana del mesociclo (semanas 1..5).
+// Offset de RIR por semana del bloque (semanas 1..4).
+// No hay semana de descarga: la recuperación es la semana 1, que se entrena a RIR +1
+// (más suave) antes de volver a apretar. Así el bloque nunca para del todo.
 // La semana 3 es la "normal" (offset 0), por eso el rir de routines.js es el de esa semana.
-// Reproduce las tablas de los PDFs: Anna 3/2-3/2/1-2/4 · David 2-3/2/2/1-2/4.
-export const WEEK_RIR_OFFSET = [1, 0.5, 0, -0.5, 2];
+export const WEEK_RIR_OFFSET = [1, 0.5, 0, -0.5];
+
+export const BLOCK_WEEKS = WEEK_RIR_OFFSET.length;
+
+/**
+ * Fechas de inicio de cada bloque, deducidas del propio registro de entreno: el bloque 1
+ * empieza el día de la primera serie anotada, y cada bloque siguiente en la primera sesión
+ * que cae a partir de los 28 días del anterior.
+ *
+ * Se mira la sesión y no el calendario a propósito: si te vas diez días de vacaciones —que
+ * es justo lo que pasó en agosto de 2026— el bloque te espera en vez de avanzar solo y
+ * dejarte en una semana que nunca entrenaste.
+ *
+ * `dates`: fechas ISO con entreno, únicas y ordenadas de menor a mayor.
+ * `anchor`: fecha opcional de cambio de plan (routine.blockFrom).
+ */
+export function blockStarts(dates, anchor) {
+  const out = [];
+  for (const d of dates) {
+    const ultimo = out[out.length - 1];
+    const dias = ultimo ? Math.floor((Date.parse(d) - Date.parse(ultimo)) / 86400000) : Infinity;
+    // `anchor`: fecha en la que cambió el plan. Cruzarla abre bloque nuevo aunque el
+    // anterior no haya cumplido sus 4 semanas — si la rutina es otra, el bloque es otro.
+    const cambioDePlan = anchor && ultimo && ultimo < anchor && d >= anchor;
+    if (dias >= BLOCK_WEEKS * 7 || cambioDePlan) out.push(d);
+  }
+  return out;
+}
 
 export function mesocycleWeek(startISO, todayISO) {
   const days = Math.floor((Date.parse(todayISO) - Date.parse(startISO)) / 86400000);
   if (!Number.isFinite(days) || days < 0) return 1;
-  return (Math.floor(days / 7) % 5) + 1;
-}
-
-export function isDeload(week) {
-  return week === 5;
+  return (Math.floor(days / 7) % 4) + 1;
 }
 
 export function targetRir(exercise, week) {
@@ -23,7 +47,6 @@ export function targetRir(exercise, week) {
 }
 
 export function effectiveSets(exercise, week, isFirstOfSession) {
-  if (isDeload(week)) return Math.max(1, Math.floor(exercise.sets / 2));
   // La semana 3 añade 1 serie al primer ejercicio de cada sesión (ambos PDFs).
   if (week === 3 && isFirstOfSession) return exercise.sets + 1;
   return exercise.sets;
@@ -59,10 +82,15 @@ export function groupSessions(records) {
 /**
  * Qué peso poner hoy en este ejercicio.
  * Devuelve { weight, reason, last, action } donde action es
- * 'start' | 'up' | 'hold' | 'load' | 'deload'.
+ * 'start' | 'up' | 'hold' | 'load'.
  */
 export function suggest(exercise, records, week) {
-  const sessions = groupSessions(records);
+  // `reset`: fecha desde la que cuenta el histórico de ESTE ejercicio. Cuando se baja la
+  // carga a propósito (una meseta larga, un cambio de técnica), sin esto la sugerencia
+  // seguiría sacando el peso de la última sesión y el reset no serviría de nada.
+  const sessions = groupSessions(
+    exercise.reset ? records.filter((r) => r.loggedAt >= exercise.reset) : records
+  );
   const target = targetRir(exercise, week);
   const bodyweight = exercise.unit === 'peso-corporal';
 
@@ -84,16 +112,6 @@ export function suggest(exercise, records, week) {
 
   const repsText = done.map((s) => s.reps).join('/');
   const last_ = `${last.date} · ${repsText}${bodyweight ? '' : ` a ${fmt(weight)} kg`}`;
-
-  if (isDeload(week)) {
-    return {
-      weight,
-      reason: 'Semana de descarga: mismo peso, la mitad de las series y lejos del fallo.',
-      reasonKey: 'sugDeload', reasonArgs: [],
-      last: last_,
-      action: 'deload',
-    };
-  }
 
   const hitTop = done.length > 0 && done.every((s) => s.reps >= exercise.repMax);
   // La puerta se compara contra el RIR BASE del ejercicio, no contra el modulado por la semana.

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import fsSync from 'node:fs';
 import {
-  mesocycleWeek, isDeload, targetRir, effectiveSets, e1rm, groupSessions, suggest,
+  mesocycleWeek, blockStarts, BLOCK_WEEKS, targetRir, effectiveSets, e1rm, groupSessions, suggest,
 } from './progression.js';
 import { USERS, allExercises } from './routines.js';
 import { MOVES, moveSvg } from './moves.js';
@@ -14,28 +14,55 @@ const set = (setIndex, weight, reps, rir, loggedAt = '2026-07-20') => ({ setInde
 assert.equal(mesocycleWeek('2026-07-01', '2026-07-01'), 1, 'día 0 → semana 1');
 assert.equal(mesocycleWeek('2026-07-01', '2026-07-07'), 1, 'día 6 → semana 1');
 assert.equal(mesocycleWeek('2026-07-01', '2026-07-08'), 2, 'día 7 → semana 2');
-assert.equal(mesocycleWeek('2026-07-01', '2026-08-04'), 5, 'día 34 → semana 5');
-assert.equal(mesocycleWeek('2026-07-01', '2026-08-05'), 1, 'día 35 → vuelve a semana 1');
+assert.equal(mesocycleWeek('2026-07-01', '2026-07-22'), 4, 'día 21 → semana 4');
+assert.equal(mesocycleWeek('2026-07-01', '2026-07-29'), 1, 'día 28 → vuelve a semana 1, sin descarga');
 assert.equal(mesocycleWeek('2026-07-01', '2026-06-20'), 1, 'fecha anterior al inicio → semana 1');
 assert.equal(mesocycleWeek('basura', '2026-07-01'), 1, 'fecha inválida → semana 1');
-assert.ok(isDeload(5) && !isDeload(4));
+
+// --- bloques deducidos del registro de entreno ---------------------------
+assert.equal(BLOCK_WEEKS, 4);
+assert.deepEqual(blockStarts([]), [], 'sin entrenos no hay bloque');
+assert.deepEqual(blockStarts(['2026-09-14']), ['2026-09-14'], 'el bloque 1 empieza en la primera serie');
+// 28 días justos: el día 28 ya es bloque nuevo, el 27 todavía no.
+assert.deepEqual(blockStarts(['2026-09-14', '2026-10-11']), ['2026-09-14'], 'día 27: mismo bloque');
+assert.deepEqual(blockStarts(['2026-09-14', '2026-10-12']), ['2026-09-14', '2026-10-12'], 'día 28: bloque nuevo');
+// El bloque espera a que entrenes: un parón de 40 días no genera bloques vacíos por el medio.
+assert.deepEqual(
+  blockStarts(['2026-09-14', '2026-09-21', '2026-11-02']),
+  ['2026-09-14', '2026-11-02'],
+  'tras un parón largo el bloque nuevo empieza en la sesión, no en el día 29');
+// Y el reloj del bloque siguiente cuenta desde esa sesión, no desde la fecha teórica.
+assert.deepEqual(
+  blockStarts(['2026-09-14', '2026-11-02', '2026-11-29']),
+  ['2026-09-14', '2026-11-02'],
+  'el bloque 2 dura sus 4 semanas completas desde que arrancó');
+assert.equal(mesocycleWeek(blockStarts(['2026-09-14']).at(-1), '2026-09-28'), 3);
+// Cambio de plan: cruzar la fecha ancla abre bloque nuevo aunque falten semanas.
+assert.deepEqual(
+  blockStarts(['2026-08-03', '2026-08-31', '2026-09-16'], '2026-09-14'),
+  ['2026-08-03', '2026-08-31', '2026-09-16'],
+  'el bloque nuevo empieza en el primer entreno tras el cambio de plan');
+assert.deepEqual(
+  blockStarts(['2026-08-03', '2026-08-31'], '2026-09-14'),
+  ['2026-08-03', '2026-08-31'],
+  'sin entrenar todavía, el ancla no inventa un bloque: queda pendiente');
+assert.deepEqual(blockStarts(['2026-09-16'], '2026-09-14'), ['2026-09-16'],
+  'el ancla nunca parte el primer bloque en dos');
 
 // --- RIR objetivo por semana ---------------------------------------------
 assert.equal(targetRir(banca, 1), 3);
 assert.equal(targetRir(banca, 3), 2);
 assert.equal(targetRir(banca, 4), 1.5);
-assert.equal(targetRir(banca, 5), 4, 'la descarga sube el RIR a 4');
+assert.equal(targetRir(banca, 1), targetRir(banca, 3) + 1, 'la semana 1 es la suave del bloque');
 // Nunca por debajo de 1: el plan no entrena al fallo.
 assert.equal(targetRir({ ...banca, rir: 1 }, 4), 1, 'clamp inferior en 1');
-assert.equal(targetRir({ ...banca, rir: 4 }, 5), 5, 'clamp superior en 5');
+assert.equal(targetRir({ ...banca, rir: 5 }, 1), 5, 'clamp superior en 5');
 
 // --- series efectivas ----------------------------------------------------
 assert.equal(effectiveSets(banca, 2, true), 4);
 assert.equal(effectiveSets(banca, 3, true), 5, 'semana 3 suma 1 serie al primer ejercicio');
 assert.equal(effectiveSets(banca, 3, false), 4, '...pero solo al primero');
-assert.equal(effectiveSets(banca, 5, true), 2, 'descarga: mitad de series');
-assert.equal(effectiveSets({ ...banca, sets: 3 }, 5, false), 1, 'descarga de 3 series → 1');
-assert.equal(effectiveSets({ ...banca, sets: 2 }, 5, false), 1, 'nunca 0 series');
+assert.equal(effectiveSets(banca, 4, true), 4, 'sin semana de descarga, la 4 es normal');
 
 // --- e1RM ----------------------------------------------------------------
 assert.equal(Math.round(e1rm(77.5, 8)), 98, '77,5 × 8 ≈ 98 kg de 1RM');
@@ -77,11 +104,6 @@ assert.equal(s.action, 'hold');
 s = suggest(banca, [set(0, 77.5, 8, null), set(1, 77.5, 8, null)], 3);
 assert.equal(s.action, 'up');
 
-// El mismo histórico en semana de descarga NO sube el peso
-s = suggest(banca, [set(0, 77.5, 8, 2), set(1, 77.5, 8, 2), set(2, 77.5, 8, 2), set(3, 77.5, 8, 2)], 5);
-assert.equal(s.action, 'deload');
-assert.equal(s.weight, 77.5);
-
 // Sin margen (RIR 1 < base 2) se consolida el peso, en cualquier semana
 assert.equal(suggest(banca, [set(0, 77.5, 8, 1), set(1, 77.5, 8, 1)], 4).action, 'hold');
 
@@ -107,13 +129,25 @@ assert.equal(s.action, 'load');
 assert.match(s.reason, /lastre/);
 assert.ok(!s.last.includes('kg'), 'en peso corporal no se muestran kilos');
 
+// `reset`: el histórico anterior a esa fecha no cuenta, así que vuelve a la carga inicial.
+// Sin esto, bajar el peso a propósito tras una meseta no serviría: la sugerencia seguiría
+// sacándolo de la última sesión.
+const reseteada = { ...banca, reset: '2026-09-14', startLoad: 72.5 };
+s = suggest(reseteada, [set(0, 80, 6, 1, '2026-08-31'), set(1, 80, 5, 1, '2026-08-31')], 1);
+assert.equal(s.action, 'start', 'con reset, el histórico viejo no cuenta');
+assert.equal(s.weight, 72.5, 'vuelve a la carga inicial del plan');
+// A partir de la fecha del reset el histórico vuelve a mandar.
+s = suggest(reseteada, [set(0, 80, 6, 1, '2026-08-31'), set(0, 72.5, 8, 2, '2026-09-21'), set(1, 72.5, 8, 2, '2026-09-21')], 1);
+assert.equal(s.action, 'up');
+assert.equal(s.weight, 75, 'progresa desde el peso reseteado, no desde los 80 viejos');
+
 // Series anotadas a 0 reps (saltadas) no cuentan como tope alcanzado
 s = suggest(banca, [set(0, 77.5, 8, 2), set(1, 0, 0, null)], 3);
 assert.equal(s.action, 'up', 'las series vacías se ignoran');
 
 // --- integridad de los datos de rutina -----------------------------------
 for (const [uk, user] of Object.entries(USERS)) {
-  assert.equal(user.weekLabels.length, 5, `${uk}: 5 etiquetas de semana`);
+  assert.equal(user.weekLabels.length, 4, `${uk}: 4 etiquetas de semana`);
   // Anna y David entrenan 4 días; Jan, 5. Se permite el rango, no un número fijo.
   assert.ok(user.days.length >= 4 && user.days.length <= 6, `${uk}: ${user.days.length} días`);
   const wd = user.days.map((d) => d.weekday);
@@ -168,8 +202,8 @@ for (const [uk, user] of Object.entries(USERS)) {
   // devolverle ejercicios que ha pedido quitar: la decisión es suya, no del programa.
   assert.ok(diasConCore >= 2, `${uk}: solo ${diasConCore} días con core, hacen falta 2`);
 }
-assert.equal(allExercises('anna').length, 33, 'Anna: 33 ejercicios');
-assert.equal(allExercises('david').length, 32, 'David: 32 ejercicios');
+assert.equal(allExercises('anna').length, 29, 'Anna: 29 ejercicios');
+assert.equal(allExercises('david').length, 31, 'David: 31 ejercicios');
 // El lunes y el jueves son la misma sesión, así que sus 6 ejercicios se cuentan dos veces.
 assert.equal(allExercises('jan').length, 36, 'Jan: 36 ejercicios');
 
@@ -208,7 +242,7 @@ assert.deepEqual(Object.keys(MOVES).filter((k) => !usados.has(k)), [], 'patrones
       const routine = generateRoutine({ daysPerWeek, experience, goal: 'musculo' });
       const user = resolveRoutine({ name: 'Test', remote_key: 'test_000000', routine });
       assert.equal(user.days.length, daysPerWeek, `${daysPerWeek}d: días generados`);
-      assert.equal(user.weekLabels.length, 5, `${daysPerWeek}d: etiquetas de semana`);
+      assert.equal(user.weekLabels.length, 4, `${daysPerWeek}d: etiquetas de semana`);
       for (const d of user.days) {
         assert.ok(d.name && d.warmup, `${daysPerWeek}d/${d.key}: al resolver faltan los textos del día`);
         for (const ex of d.exercises) {

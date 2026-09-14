@@ -379,7 +379,6 @@ input[type="number"], input[type="date"] {
 .meso-seg { flex: 1; height: 2px; border-radius: var(--r-pill); background: rgba(255, 255, 255, 0.09); }
 .meso-seg.done { background: rgba(255, 255, 255, 0.45); }
 .meso-seg.cur { background: var(--acc); }
-.meso.deload .meso-seg.cur { background: var(--acc-dim); }
 .meso-rir {
   flex: 0 0 auto;
   font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
@@ -785,6 +784,12 @@ select.picker:focus { outline: none; border-color: var(--acc); }
 .note strong { color: var(--fg); font-weight: 600; }
 .note.warn { border-left-color: var(--warn); }
 .note.today-note { border-left-color: var(--acc); }
+/* Bloque nuevo: el único aviso que trae su propio botón para darse por leído. */
+.note.new-block { border-left-color: var(--acc); }
+.btn-inline {
+  display: block; margin-top: 10px; padding: 0; border: 0; background: none;
+  font: inherit; font-weight: 600; color: var(--acc); cursor: pointer;
+}
 
 /* aviso de versión nueva: barra blanco roto, por encima de todo */
 .update {
