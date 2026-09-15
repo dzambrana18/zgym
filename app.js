@@ -1,7 +1,7 @@
 import { EXERCISES, DAYS, findDay, allExercises, videoUrl, todaysDay, nextDay, weekdayIndex } from './routines.js';
 import { login, signup, resolveRoutine, materialize, normalizeUsername, validPin, hashPin, exOverrides } from './accounts.js';
 import { moveSvg } from './moves.js';
-import { TARGETS, MEALS, SAMPLE_DAY, mealByKey, dayTotals, shoppingList } from './nutrition.js';
+import { TARGETS, MEALS, SAMPLE_DAY, mealByKey, dayTotals, shoppingList, weekPlan, planDayTotals } from './nutrition.js';
 import {
   t, getLang, setLang, LANGS, locale, exName, exCue, dayName, daySubtitle, dayWarmup,
   mealName, mealTip, mealIngredients, mealSteps, userSubtitle, targetField, weekdayName, slotName,
@@ -17,7 +17,7 @@ import {
 export const VERSION = '1.6.0';
 
 const app = document.getElementById('app');
-const state = { user: db.getUser(), view: 'home', dayKey: null, open: null, exKey: null, meal: null, override: {}, draft: {} };
+const state = { user: db.getUser(), view: 'home', dayKey: null, open: null, exKey: null, meal: null, planDay: null, override: {}, draft: {} };
 
 // Lo que hay escrito en los inputs pero aún sin guardar. Sin esto, marcar una serie
 // re-renderiza la tarjeta y se perderían las repeticiones ya escritas en las otras filas.
@@ -942,6 +942,9 @@ function viewDiet() {
   const tot = dayTotals(u);
   const difKcal = Math.round(tot.kcal - tg.kcal);
   const conEjemplo = (SAMPLE_DAY[u] || []).length > 0;
+  const semana = weekPlan(u);
+  const lista = semana ? shoppingList(u) : [];
+  const compra = db.getCompra(u);
 
   const mealCard = (m, slot, half) => {
     const abierto = state.meal === m.key;
@@ -990,7 +993,40 @@ function viewDiet() {
       ${SAMPLE_DAY[u].map((it) => mealCard(mealByKey(it.key), it.slot, it.half)).join('')}
     </div>
 
-    <button class="btn wide" id="lista" style="margin-top:22px">${t('shoppingBtn')}</button>` : ''}
+    ` : ''}
+
+    ${semana ? `
+    <div class="sec-title">${t('weekPlanKicker')}</div>
+    <p class="muted">${t('weekPlanNote')}</p>
+    <div class="list">
+      ${semana.map(({ day, meals }) => {
+        const tt = planDayTotals(meals);
+        const abierto = state.planDay === day;
+        return `<div class="meal ${abierto ? 'open' : ''}">
+          <button class="ex-head" data-planday="${day}" aria-expanded="${abierto}">
+            <span class="ex-name">${esc(weekdayName(day))}
+              <span class="ex-spec">${meals.filter((m) => m.slot === 'Comida' || m.slot === 'Cena')
+                .map((m) => esc(mealName(mealByKey(m.key)))).join(' · ')}</span>
+              <span class="ex-spec">${Math.round(tt.kcal)} kcal · ${Math.round(tt.prot)} ${t('gProtein')} · ≈${fmt(Math.round(tt.price * 100) / 100)} €</span>
+            </span>
+            <span class="ex-state">${abierto ? '−' : '+'}</span>
+          </button>
+          ${abierto ? `<div class="recipe"><ul>${meals.map((m) => `<li><strong>${esc(slotName(m.slot))}</strong> — ${esc(mealName(mealByKey(m.key)))}</li>`).join('')}</ul></div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="sec-title">${t('shoppingTitle')}</div>
+    <p class="muted">${t('shoppingNote', compra.size, lista.length)}</p>
+    <div class="list">
+      ${lista.map(({ item, veces }) => `
+        <button class="row-i compra ${compra.has(item) ? 'done' : ''}" data-buy="${esc(item)}">
+          <span class="tick" aria-hidden="true">${compra.has(item) ? ICONS.check : ''}</span>
+          <span class="row-i-main"><strong>${esc(item)}</strong>${veces > 1 ? `<small>${t('shoppingTimes', veces)}</small>` : ''}</span>
+        </button>`).join('')}
+    </div>
+    <button class="btn wide" id="lista-reset" style="margin-top:14px">${t('shoppingClear')}</button>
+    ` : ''}
 
     ${CATS.map(([c, label]) => `
       <div class="sec-title">${t(label)}</div>
@@ -1002,12 +1038,23 @@ function viewDiet() {
   app.querySelectorAll('[data-openmeal]').forEach((b) => {
     b.onclick = () => { state.meal = state.meal === b.dataset.openmeal ? null : b.dataset.openmeal; render(); };
   });
-  const lista = document.getElementById('lista');
-  if (lista) lista.onclick = () => {
-    const l = shoppingList(u);
-    navigator.clipboard?.writeText(t('shoppingTitle') + '\n\n' + l.map((i) => '- ' + i).join('\n'))
-      .then(() => toast(t('shoppingCopied'))).catch(() => {});
-  };
+  app.querySelectorAll('[data-planday]').forEach((b) => {
+    b.onclick = () => { state.planDay = state.planDay === +b.dataset.planday ? null : +b.dataset.planday; render(); };
+  });
+  // Tachar en el súper no puede volver a dibujar la pantalla entera: se perdería el sitio
+  // del scroll en una lista de 49 líneas, que es justo cuando más molesta.
+  app.querySelectorAll('[data-buy]').forEach((b) => {
+    b.onclick = () => {
+      const set = db.getCompra(u);
+      const item = b.dataset.buy;
+      if (set.has(item)) set.delete(item); else set.add(item);
+      db.setCompra(u, set);
+      b.classList.toggle('done', set.has(item));
+      b.querySelector('.tick').innerHTML = set.has(item) ? ICONS.check : '';
+    };
+  });
+  const reset = document.getElementById('lista-reset');
+  if (reset) reset.onclick = () => { db.setCompra(u, new Set()); render(); };
   wireTabs('diet');
 }
 

@@ -200,9 +200,46 @@ export const SAMPLE_DAY = {
     { key: 'arroz-pollo', slot: 'Comida' },
     { key: 'batido-proteina', slot: 'Media tarde' },
     { key: 'pollo-hummus', slot: 'Cena' },
-    { key: 'requeson-fruta', slot: 'Antes de dormir', half: true },
+    { key: 'requeson-fruta', slot: 'Antes de dormir' },
   ],
 };
+
+
+// Rotación semanal. Solo David la tiene escrita: es el único que come de táper con
+// horario cerrado y necesita saber qué toca el jueves sin pensarlo. Para el resto, el
+// día de ejemplo repetido es exactamente lo que ya se les enseñaba, así que no se
+// inventan siete días de datos que nadie ha pedido.
+//
+// El desayuno, la media mañana, la media tarde y la toma de antes de dormir son fijas:
+// lo que rota es la comida y la cena, que es lo único que se cocina.
+const D_FIJAS = [
+  { key: 'queso-batido-proteina', slot: 'Desayuno' },
+  { key: 'yogur-almendras', slot: 'Media mañana' },
+  { key: 'batido-proteina', slot: 'Media tarde' },
+  { key: 'requeson-fruta', slot: 'Antes de dormir' },
+];
+const diaDavid = (comida, cena) => [
+  D_FIJAS[0], D_FIJAS[1],
+  { key: comida, slot: 'Comida' },
+  D_FIJAS[2],
+  { key: cena, slot: 'Cena' },
+  D_FIJAS[3],
+];
+
+export const WEEK_PLAN = {
+  david: [
+    { day: 1, meals: diaDavid('arroz-pollo', 'pollo-hummus') },
+    { day: 2, meals: diaDavid('pollo-boniato', 'revuelto-gambas') },
+    { day: 3, meals: diaDavid('pasta-atun', 'pollo-hummus') },
+    { day: 4, meals: diaDavid('arroz-pollo', 'merluza-verduras') },
+    { day: 5, meals: diaDavid('lentejas-huevo', 'pollo-hummus') },
+    { day: 6, meals: diaDavid('wok-ternera', 'ensalada-completa') },
+    { day: 0, meals: diaDavid('pollo-boniato', 'tortilla-patata') },
+  ],
+};
+
+/** Los 7 días del plan, o null si ese usuario solo tiene día de ejemplo. */
+export const weekPlan = (userKey) => WEEK_PLAN[userKey] || null;
 
 export const mealByKey = (k) => MEALS.find((m) => m.key === k) || null;
 
@@ -219,12 +256,32 @@ export function dayTotals(userKey) {
 }
 
 /** Lista de la compra del día de ejemplo, sin repetir ingredientes. */
+/**
+ * Lista de la compra de la SEMANA, con cuántas veces entra cada ingrediente. Sin el
+ * recuento no sirve para el súper: saber que necesitas pechuga no te dice si compras
+ * una bandeja o tres. Si el usuario no tiene rotación semanal, cuenta el día de ejemplo
+ * siete veces, que es lo que de verdad va a comer.
+ */
 export function shoppingList(userKey) {
-  const out = [];
-  for (const it of SAMPLE_DAY[userKey] || []) {
-    for (const ing of mealByKey(it.key)?.ingredients || []) {
-      if (!out.includes(ing)) out.push(ing);
+  const plan = WEEK_PLAN[userKey];
+  const dias = plan ? plan.map((d) => d.meals) : Array(7).fill(SAMPLE_DAY[userKey] || []);
+  const cuenta = new Map();
+  for (const meals of dias) {
+    for (const it of meals) {
+      for (const ing of mealByKey(it.key)?.ingredients || []) {
+        cuenta.set(ing, (cuenta.get(ing) || 0) + 1);
+      }
     }
   }
-  return out;
+  return [...cuenta].map(([item, veces]) => ({ item, veces }));
+}
+
+/** kcal, proteína y precio de un día del plan. */
+export function planDayTotals(meals) {
+  return meals.reduce((t, it) => {
+    const m = mealByKey(it.key);
+    if (!m) return t;
+    const f = it.half ? 0.5 : 1;
+    return { kcal: t.kcal + m.kcal * f, prot: t.prot + m.prot * f, price: t.price + m.price * f };
+  }, { kcal: 0, prot: 0, price: 0 });
 }

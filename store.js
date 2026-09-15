@@ -26,6 +26,7 @@ const K = {
   sets: (u) => `gym.${u}.sets`,
   body: (u) => `gym.${u}.body`,
   blocksSeen: (u) => `gym.${u}.blocksSeen`,
+  compra: (u) => `gym.${u}.compra`,
   queue: 'gym.pendingSync',
   lastSync: 'gym.lastSync',
 };
@@ -141,6 +142,12 @@ export const trainingDates = (u) =>
 /** Cuántos bloques ha visto ya el usuario, para avisar solo una vez de cada uno. */
 export const getBlocksSeen = (u) => read(K.blocksSeen(u), 0);
 export const setBlocksSeen = (u, n) => write(K.blocksSeen(u), n);
+
+// --- lista de la compra ----------------------------------------------------
+// Solo en el móvil: es una lista que se tacha en el pasillo del súper y se vacía al
+// salir. No va a la nube porque no es un dato de entrenamiento, es un recado.
+export const getCompra = (u) => new Set(read(K.compra(u), []));
+export const setCompra = (u, set) => write(K.compra(u), [...set]);
 
 // --- series ----------------------------------------------------------------
 export const getSets = (u) => read(K.sets(u), []);

@@ -412,6 +412,15 @@ input[type="number"], input[type="date"] {
 }
 .row-i:active { opacity: 0.55; }
 .row-i.static { cursor: default; }
+
+/* ---------- lista de la compra: se tacha con el pulgar, en el pasillo ---------- */
+.row-i.compra { gap: 12px; }
+.row-i.compra .tick {
+  flex: 0 0 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--fg3);
+  display: flex; align-items: center; justify-content: center; color: var(--bg);
+}
+.row-i.compra.done .tick { background: var(--acc); border-color: var(--acc); }
+.row-i.compra.done .row-i-main strong { text-decoration: line-through; color: var(--fg3); }
 .row-i.static:active { opacity: 1; }
 .row-i[disabled] { opacity: 0.35; cursor: default; }
 .row-i-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
