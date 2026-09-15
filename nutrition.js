@@ -21,16 +21,23 @@ export const TARGETS = {
     proteinaNota: 'Tus 115 g son el mínimo. Con la proteína en polvo que ya tomas llegas fácil, pero lo que de verdad te falta son las calorías: la crema de arroz y el arroz, la pasta y el pan son tus aliados aquí.',
   },
   david: {
-    kcal: 2400, prot: 190, fat: 70, carb: 245,
-    estrategia: 'Déficit moderado para recomposición',
-    detalle: 'Con un 27 % de grasa y 3-4 años entrenando, se puede ganar músculo y perder grasa a la vez, pero solo comiendo por debajo del mantenimiento. Objetivo: bajar 0,5-0,7 kg por semana.',
-    proteinaNota: 'Los 190 g son lo que protege tu masa magra en déficit, y además es lo que más te va a saciar.',
+    kcal: 2350, prot: 192, fat: 78, carb: 220,
+    estrategia: 'Déficit moderado para perder grasa',
+    detalle: 'Recalculado con datos reales: 87,2 kg, 180 cm, 22 años, 4 días de gimnasio. Mantenimiento ~2.900 kcal. Objetivo: bajar 0,4-0,5 kg por semana hasta los 80 kg, que es donde se marca la cintura — volver a 83 no vale, porque a 83 ya estabas tapado. Son unas 15 semanas.',
+    proteinaNota: 'Los 192 g son el mínimo. En el bloque de agosto la pierna subió un 22 %: esa masa es lo que la proteína alta tiene que proteger ahora que comes por debajo.',
   },
 };
 
 // cat: desayuno | comida | cena | snack
 export const MEALS = [
   // ---------------------------------------------------------------- desayunos
+  {
+    key: 'queso-batido-proteina', cat: 'desayuno', name: 'Queso batido con proteína, avena y plátano',
+    kcal: 510, prot: 52, min: 3, price: 1.55,
+    ingredients: ['250 g de queso batido 0 %', '30 g de proteína en polvo de chocolate', '50 g de copos de avena', '1 plátano'],
+    steps: ['Mezcla el queso batido con la proteína hasta que no queden grumos.', 'Añade la avena y el plátano en rodajas.', 'Déjalo hecho la noche antes en un táper: la avena se ablanda y por la mañana son 30 segundos.'],
+    tip: '52 g de proteína en tres minutos y por 1,55 €. Es la comida con mejor relación proteína/tiempo/precio de toda la lista, y por eso abre el día cuando solo tienes veinte minutos.',
+  },
   {
     key: 'avena-yogur', cat: 'desayuno', name: 'Yogur proteico con avena, plátano y cacahuete',
     kcal: 520, prot: 32, min: 3, price: 1.4,
@@ -184,14 +191,16 @@ export const SAMPLE_DAY = {
     { key: 'requeson-fruta', slot: 'Antes de dormir' },
     { key: 'yogur-almendras', slot: 'Post-entreno', half: true },
   ],
+  // Cinco comidas, no siete: se levanta a las 7:30, sale a las 7:50, come de táper en el
+  // trabajo, entrena hasta las 19:00 y llega a casa a las 20:30. Todo lo que pase de
+  // 12 minutos de cocina entre semana no se hace, y una dieta que no se hace no es dieta.
   david: [
-    { key: 'tortilla-pavo', slot: 'Desayuno' },
+    { key: 'queso-batido-proteina', slot: 'Desayuno' },
     { key: 'yogur-almendras', slot: 'Media mañana' },
-    { key: 'pollo-boniato', slot: 'Comida' },
-    { key: 'batido-proteina', slot: 'Post-entreno' },
-    { key: 'tostada-cacahuete', slot: 'Media tarde' },
-    { key: 'merluza-verduras', slot: 'Cena' },
-    { key: 'requeson-fruta', slot: 'Antes de dormir' },
+    { key: 'arroz-pollo', slot: 'Comida' },
+    { key: 'batido-proteina', slot: 'Media tarde' },
+    { key: 'pollo-hummus', slot: 'Cena' },
+    { key: 'requeson-fruta', slot: 'Antes de dormir', half: true },
   ],
 };
 
