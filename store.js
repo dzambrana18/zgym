@@ -282,13 +282,24 @@ export async function syncNow(remoteKeys) {
 }
 
 // --- recuperar desde la nube ----------------------------------------------
+// PostgREST corta cada respuesta en 1.000 filas, y lo hace en silencio. Sin paginar, un
+// móvil que restaura desde la nube con más de 1.000 series se quedaría sin las más
+// recientes, que son justo de las que sale la sugerencia de carga. Pasó al analizar el
+// bloque de septiembre: la descarga se cortó en 1.000 y parecía que no se había entrenado
+// en doce días. Se pide hasta que llega una página vacía en vez de "hasta que una venga
+// incompleta", para no depender de cuál sea el límite configurado en el servidor.
+const PAGE = 1000;
 async function fetchTable(table, remoteKey) {
-  const url = `${SUPABASE_URL}/rest/v1/${table}?user_key=eq.${encodeURIComponent(remoteKey)}&select=*`;
-  const res = await fetch(url, {
-    headers: authHeaders(),
-  });
-  if (!res.ok) throw new Error(`${table}: HTTP ${res.status} ${await res.text()}`);
-  return res.json();
+  const out = [];
+  for (let offset = 0; ; offset += PAGE) {
+    const url = `${SUPABASE_URL}/rest/v1/${table}?user_key=eq.${encodeURIComponent(remoteKey)}`
+      + `&select=*&order=id.asc&limit=${PAGE}&offset=${offset}`;
+    const res = await fetch(url, { headers: authHeaders() });
+    if (!res.ok) throw new Error(`${table}: HTTP ${res.status} ${await res.text()}`);
+    const page = await res.json();
+    if (page.length === 0) return out;
+    out.push(...page);
+  }
 }
 
 /**
