@@ -8,7 +8,7 @@ import {
 } from './i18n.js';
 import * as db from './store.js';
 import {
-  mesocycleWeek, blockStarts, targetRir, effectiveSets, e1rm, groupSessions, suggest, fmt,
+  mesocycleWeek, blockStarts, blockPending, targetRir, effectiveSets, e1rm, groupSessions, suggest, fmt,
 } from './progression.js';
 
 // Versión de esta copia de la app. Va emparejada con version.json, que se sirve
@@ -135,10 +135,10 @@ function ctx() {
   // routines.js) o JSON con refs al catálogo (usuarios creados desde la app).
   const user = resolveRoutine(db.getAccount(u));
   // El bloque no se configura: se deduce de las series anotadas. Cuando la rutina cambia
-  // (user.blockFrom) el bloque en curso se cierra y el siguiente queda PENDIENTE hasta
-  // que haya un entreno de verdad: mientras tanto se enseña la semana 1 como adelanto.
+  // o el bloque en curso cumple sus 4 semanas, el siguiente queda PENDIENTE hasta que
+  // haya un entreno de verdad: mientras tanto se enseña ya como bloque nuevo, semana 1.
   const starts = blockStarts(db.trainingDates(u), user.blockFrom);
-  const pendiente = Boolean(user.blockFrom) && (starts.at(-1) || '') < user.blockFrom;
+  const pendiente = blockPending(starts, db.todayISO(), user.blockFrom);
   const start = pendiente ? null : starts.at(-1) || null;
   const week = start ? mesocycleWeek(start, db.todayISO()) : 1;
   // Los bloques ya cerrados antes de esta versión no se anuncian: el aviso es para los
@@ -386,18 +386,20 @@ function nowCard(u, user, week) {
 }
 
 /**
- * Aviso de bloque nuevo. Salta una sola vez por bloque: en cuanto se cierra, se guarda
- * cuántos bloques ha visto el usuario. Enseña el resumen del anterior porque el dato del
- * bloque cerrado es justo lo que se pierde de vista al empezar el siguiente.
+ * Aviso de bloque terminado. Salta en cuanto el bloque se cierra —al cumplir sus 4
+ * semanas o al cambiar la rutina—, sin esperar a que se anote la primera serie del
+ * siguiente: abrir la app y ver que el bloque ha acabado tiene que ser automático. Sale
+ * una sola vez por bloque y enseña el resumen del que se cierra, porque es justo el dato
+ * que se pierde de vista al empezar el nuevo.
  */
-function blockNotice(u, starts) {
-  const n = starts.length;
+function blockNotice(u, starts, pendiente) {
+  const n = starts.length + (pendiente ? 1 : 0);   // el bloque que se está enseñando
   if (n < 2 || db.getBlocksSeen(u) >= n) return '';
   const prev = blockSummary(u, starts, n - 2);
   const f = (iso) => new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
   return `<div class="note new-block" id="block-notice">
-    <strong>${t('blockNewTitle', n)}</strong>
-    ${t('blockNewBody', n - 1, f(prev.desde), f(prev.fin), prev.sesiones, prev.series, f(starts[n - 1]))}
+    <strong>${t('blockDoneTitle', n - 1)}</strong>
+    ${t('blockDoneBody', f(prev.desde), f(prev.fin), prev.sesiones, prev.series, n)}
     <button class="btn-inline" id="block-ok">${t('blockOk')}</button>
   </div>`;
 }
@@ -416,7 +418,7 @@ function viewHome() {
 
   app.innerHTML = `
     ${lead(user.name, userSubtitle(u, user))}
-    ${blockNotice(u, starts)}
+    ${blockNotice(u, starts, pendiente)}
     ${nowCard(u, user, week)}
 
     <div class="wk">
@@ -483,7 +485,7 @@ function viewHome() {
   });
   app.querySelector('[data-go="body"]').onclick = () => { state.view = 'body'; render(); };
   const ok = document.getElementById('block-ok');
-  if (ok) ok.onclick = () => { db.setBlocksSeen(u, starts.length); render(); };
+  if (ok) ok.onclick = () => { db.setBlocksSeen(u, starts.length + (pendiente ? 1 : 0)); render(); };
   wireTabs('home');
 }
 

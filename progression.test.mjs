@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import fsSync from 'node:fs';
 import {
-  mesocycleWeek, blockStarts, BLOCK_WEEKS, targetRir, effectiveSets, e1rm, groupSessions, suggest,
+  mesocycleWeek, blockStarts, blockPending, BLOCK_WEEKS, targetRir, effectiveSets, e1rm, groupSessions, suggest,
 } from './progression.js';
 import { USERS, allExercises } from './routines.js';
 import { MOVES, moveSvg } from './moves.js';
@@ -48,6 +48,12 @@ assert.deepEqual(
   'sin entrenar todavía, el ancla no inventa un bloque: queda pendiente');
 assert.deepEqual(blockStarts(['2026-09-16'], '2026-09-14'), ['2026-09-16'],
   'el ancla nunca parte el primer bloque en dos');
+// Bloque pendiente: el siguiente ya se enseña aunque no haya ninguna serie todavía.
+assert.equal(blockPending([], '2026-10-13'), false, 'sin entrenos no hay nada pendiente');
+assert.equal(blockPending(['2026-09-14'], '2026-10-11'), false, 'día 27: el bloque sigue en curso');
+assert.equal(blockPending(['2026-09-14'], '2026-10-12'), true, 'día 28: el bloque está cerrado y el 4 espera');
+assert.equal(blockPending(['2026-08-31'], '2026-09-14', '2026-09-14'), true, 'cambio de rutina: pendiente aunque falten semanas');
+assert.equal(blockPending(['2026-08-31', '2026-10-13'], '2026-10-13'), false, 'con la primera serie el bloque arranca');
 
 // --- RIR objetivo por semana ---------------------------------------------
 assert.equal(targetRir(banca, 1), 3);

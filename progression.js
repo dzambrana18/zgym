@@ -35,6 +35,20 @@ export function blockStarts(dates, anchor) {
   return out;
 }
 
+/**
+ * ¿Hay un bloque nuevo esperando a su primera serie? Pasa en dos casos: la rutina cambió
+ * después de que empezara el bloque en curso (`anchor`), o el bloque en curso ya cumplió
+ * sus 4 semanas. En los dos la app enseña YA el bloque siguiente en su semana 1 —no
+ * "bloque 3, semana 1" cuando el 3 está cerrado—, y la fecha de inicio la pone la primera
+ * serie que se anote, que es lo que hace blockStarts.
+ */
+export function blockPending(starts, todayISO, anchor) {
+  const ultimo = starts[starts.length - 1];
+  if (!ultimo) return false;
+  if (anchor && ultimo < anchor) return true;
+  return Math.floor((Date.parse(todayISO) - Date.parse(ultimo)) / 86400000) >= BLOCK_WEEKS * 7;
+}
+
 export function mesocycleWeek(startISO, todayISO) {
   const days = Math.floor((Date.parse(todayISO) - Date.parse(startISO)) / 86400000);
   if (!Number.isFinite(days) || days < 0) return 1;
