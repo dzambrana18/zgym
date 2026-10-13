@@ -203,7 +203,7 @@ for (const [uk, user] of Object.entries(USERS)) {
   assert.ok(diasConCore >= 2, `${uk}: solo ${diasConCore} días con core, hacen falta 2`);
 }
 assert.equal(allExercises('anna').length, 29, 'Anna: 29 ejercicios');
-assert.equal(allExercises('david').length, 31, 'David: 31 ejercicios');
+assert.equal(allExercises('david').length, 29, 'David: 29 ejercicios');
 // El lunes y el jueves son la misma sesión, así que sus 6 ejercicios se cuentan dos veces.
 assert.equal(allExercises('jan').length, 36, 'Jan: 36 ejercicios');
 

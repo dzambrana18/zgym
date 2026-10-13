@@ -317,6 +317,7 @@ export const CA = {
   },
 
   ex: {
+    'd-extension-cuadriceps': { name: "Extensió de quàdriceps", cue: "Assegut a la màquina, pausa d'1 s a dalt i baixada en 2 s. Substitueix la caminada del granger: és quàdriceps aïllat, que és el que demanaves. Gimnàs nou i exercici nou: els 45 kg són una suposició, la primera sessió és per trobar el pes amb què arribes just a 15." },
     'a-zancada-caminando': { name: "Passada caminant amb manuelles", cue: "Pas llarg, el genoll de darrere baixa cap a terra i empenys amb el taló del davant. 10-12 passos per cama. Només necessita dues manuelles i un passadís: és el gluti que sempre pots fer encara que el gimnàs estigui ple." },
     'a-hip-thrust-alto': { name: "Hip thrust a màquina (repeticions altes)", cue: "Segona dosi de gluti de la setmana. Mateix moviment que dilluns però més lleuger i amb més repeticions: estreny 2 s a dalt en cadascuna." },
     'j-dead-bug': { name: 'Dead bug ("insecte mort")', cue: 'De panxa enlaire, baixes braç i cama contraris sense que la lumbar es desenganxi de terra. 10 per costat, lent.' },

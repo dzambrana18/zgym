@@ -317,6 +317,7 @@ export const EN = {
   },
 
   ex: {
+    'd-extension-cuadriceps': { name: "Leg extension", cue: "Seated on the machine, 1 s pause at the top and a 2 s descent. Replaces the farmer's walk: it is isolated quads, which is what you asked for. New gym and new exercise: the 45 kg is a guess, the first session is for finding the weight where you just barely reach 15." },
     'a-zancada-caminando': { name: "Walking lunge with dumbbells", cue: "Long step, back knee towards the floor, push through the front heel. 10-12 steps per leg. It needs two dumbbells and a corridor: the glute work you can always do even when the gym is packed." },
     'a-hip-thrust-alto': { name: "Machine hip thrust (high reps)", cue: "Second glute dose of the week. Same movement as Monday but lighter and with more reps: squeeze 2 s at the top on every one." },
     'j-dead-bug': { name: 'Dead bug', cue: 'On your back, lower opposite arm and leg without letting your lower back come off the floor. 10 per side, slow.' },
