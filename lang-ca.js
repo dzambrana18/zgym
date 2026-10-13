@@ -317,6 +317,11 @@ export const CA = {
   },
 
   ex: {
+    'd-sentadilla-smith': { name: "Sentadilla a la màquina Smith", cue: "Al gimnàs nou la sentadilla és a la Smith: un altre exercici, així que comença de zero i no es compara amb els 105 de barra lliure. Apunta sempre el TOTAL de discos dels dos costats. Quatre sèries al mateix pes i anota el RIR: sense ell, l'app puja pes només per repeticions." },
+    'd-remo-maquina-unilateral': { name: "Rem assegut unilateral a màquina", cue: "Mateix gest que el rem amb manuella, però assegut i amb el pit recolzat. Un braç cada vegada, pausa d'1 s enrere amb el colze enganxat. Apunta el que marca la màquina." },
+    'a-press-pecho-maquina': { name: "Press de pit a màquina de discos", cue: "Màquina guiada amb discos als costats. Apunta sempre el pes d'UN costat, igual que a la Smith. Esquena enganxada al respatller i baixa controlant 2 s." },
+    'a-curl-maquina': { name: "Curl de bíceps a màquina", cue: "Colze recolzat al coixí i sense desenganxar-lo. Puja en 1 s, baixa en 3 s: a màquina la baixada és on hi ha la feina. Apunta el que marca la màquina." },
+    'a-sentadilla-smith': { name: "Sentadilla a la màquina Smith", cue: "Al gimnàs nou la sentadilla és a la Smith. Apunta sempre el pes d'UN costat: l'1 d'octubre es va anotar el total i el 8 per costat, i així l'app no et pot seguir. Quatre sèries al mateix pes; profunditat fins a paral·lel." },
     'd-extension-cuadriceps': { name: "Extensió de quàdriceps", cue: "Assegut a la màquina, pausa d'1 s a dalt i baixada en 2 s. Substitueix la caminada del granger: és quàdriceps aïllat, que és el que demanaves. Gimnàs nou i exercici nou: els 45 kg són una suposició, la primera sessió és per trobar el pes amb què arribes just a 15." },
     'a-zancada-caminando': { name: "Passada caminant amb manuelles", cue: "Pas llarg, el genoll de darrere baixa cap a terra i empenys amb el taló del davant. 10-12 passos per cama. Només necessita dues manuelles i un passadís: és el gluti que sempre pots fer encara que el gimnàs estigui ple." },
     'a-hip-thrust-alto': { name: "Hip thrust a màquina (repeticions altes)", cue: "Segona dosi de gluti de la setmana. Mateix moviment que dilluns però més lleuger i amb més repeticions: estreny 2 s a dalt en cadascuna." },

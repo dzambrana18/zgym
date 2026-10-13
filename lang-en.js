@@ -317,6 +317,11 @@ export const EN = {
   },
 
   ex: {
+    'd-sentadilla-smith': { name: "Smith machine squat", cue: "At the new gym the squat is on the Smith: a different exercise, so it starts from zero and is not compared with the 105 free-bar squat. Always log the TOTAL plates on both sides. Four sets at the same weight and log the RIR: without it the app raises the weight on reps alone." },
+    'd-remo-maquina-unilateral': { name: "Seated single-arm machine row", cue: "Same movement as the dumbbell row, but seated with your chest supported. One arm at a time, 1 s pause at the back with the elbow tucked. Log what the machine shows." },
+    'a-press-pecho-maquina': { name: "Plate-loaded chest press machine", cue: "Guided machine with plates on the sides. Always log the weight of ONE side, same as on the Smith. Back against the pad and lower under control for 2 s." },
+    'a-curl-maquina': { name: "Machine biceps curl", cue: "Elbow resting on the pad and kept there. Up in 1 s, down in 3 s: on a machine the lowering is where the work is. Log what the machine shows." },
+    'a-sentadilla-smith': { name: "Smith machine squat", cue: "At the new gym the squat is on the Smith. Always log the weight of ONE side: on 1 October the total was logged and on the 8th per side, and that way the app cannot follow you. Four sets at the same weight; depth to parallel." },
     'd-extension-cuadriceps': { name: "Leg extension", cue: "Seated on the machine, 1 s pause at the top and a 2 s descent. Replaces the farmer's walk: it is isolated quads, which is what you asked for. New gym and new exercise: the 45 kg is a guess, the first session is for finding the weight where you just barely reach 15." },
     'a-zancada-caminando': { name: "Walking lunge with dumbbells", cue: "Long step, back knee towards the floor, push through the front heel. 10-12 steps per leg. It needs two dumbbells and a corridor: the glute work you can always do even when the gym is packed." },
     'a-hip-thrust-alto': { name: "Machine hip thrust (high reps)", cue: "Second glute dose of the week. Same movement as Monday but lighter and with more reps: squeeze 2 s at the top on every one." },
