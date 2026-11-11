@@ -221,6 +221,7 @@ export const UI_ES = {
   colWeight: 'Peso',
   colReps: 'Reps',
   colSecs: 'Seg.',
+  colMins: 'Min',
   perHand: 'kg por mano',
   bodyweight: 'Peso corporal',
   nudgeHint: 'ajusta si el RIR real no cuadra',
@@ -349,6 +350,7 @@ export const UI_ES = {
 
   /* motivos de la sugerencia de carga: progression.js devuelve la clave */
   sugStart: 'Primera vez: carga inicial del plan. Ajústala hasta que el RIR objetivo sea real.',
+  sugCardio: 'Mismo ritmo e inclinación. Si llegas a 20 minutos sin agarrarte, sube un punto de inclinación.',
   sugHoldReps: 'Aún no has llegado a {0} en todas las series: repite el peso e intenta sumar 1 repetición.',
   sugHoldRir: 'Llegaste al tope, pero sin margen (RIR por debajo de {0}): consolida el peso una sesión más.',
   sugLoadBw: 'Tope del rango completado: añade 2,5 kg de lastre o sube a {0} repeticiones.',

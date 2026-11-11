@@ -658,7 +658,7 @@ function exerciseCard(u, day, ex, i, week, today) {
         ${ex.photo ? `<img src="./photos/${ex.photo}-0.jpg" alt="" loading="lazy" decoding="async">` : ''}
       </span>
       <span class="ex-name">${esc(exName(ex))}
-        <span class="ex-spec">${nSets} × ${ex.timed ? `${ex.repMin}-${ex.repMax}″` : `${ex.repMin}-${ex.repMax}`} · RIR ${fmt(target)} · ${restLabel(ex.restSec)}</span>
+        <span class="ex-spec">${nSets} × ${ex.cardio ? `${ex.repMin}-${ex.repMax} min` : ex.timed ? `${ex.repMin}-${ex.repMax}″` : `${ex.repMin}-${ex.repMax}`} · ${ex.cardio ? '' : `RIR ${fmt(target)} · `}${restLabel(ex.restSec)}</span>
       </span>
       <span class="ex-state ${doneCount >= nSets ? 'done' : ''}">${doneCount}/${nSets}</span>
     </button>
@@ -677,7 +677,7 @@ function exerciseCard(u, day, ex, i, week, today) {
         </div>
       </div>
       <table class="sets">
-        <thead><tr><th>#</th>${bw ? '' : `<th>${t('colWeight')}</th>`}<th>${ex.timed ? t('colSecs') : t('colReps')}</th><th>RIR</th><th></th></tr></thead>
+        <thead><tr><th>#</th>${bw ? '' : `<th>${t('colWeight')}</th>`}<th>${ex.cardio ? t('colMins') : ex.timed ? t('colSecs') : t('colReps')}</th><th>RIR</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div class="tech">

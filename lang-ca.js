@@ -133,6 +133,7 @@ export const CA = {
     colWeight: 'Pes',
     colReps: 'Reps',
     colSecs: 'Seg.',
+    colMins: 'Min',
     perHand: 'kg per mà',
     bodyweight: 'Pes corporal',
     nudgeHint: 'ajusta si el RIR real no quadra',
@@ -255,6 +256,7 @@ export const CA = {
     updating: 'Actualitzant…',
 
     sugStart: 'Primera vegada: càrrega inicial del pla. Ajusta-la fins que el RIR objectiu sigui real.',
+    sugCardio: 'Mateix ritme i inclinació. Si arribes a 20 minuts sense agafar-te, puja un punt d’inclinació.',
     sugHoldReps: 'Encara no has arribat a {0} en totes les sèries: repeteix el pes i prova de sumar 1 repetició.',
     sugHoldRir: 'Vas arribar al topall, però sense marge (RIR per sota de {0}): consolida el pes una sessió més.',
     sugLoadBw: 'Topall del rang completat: afegeix 2,5 kg de llast o puja a {0} repeticions.',
@@ -317,6 +319,7 @@ export const CA = {
   },
 
   ex: {
+    'd-cinta': { name: "Cinta amb inclinació", cue: "Caminar, no córrer: 5,5 km/h i 8 % d'inclinació, de 15 a 20 minuts en acabar les peses. La primera setmana, 5 km/h i 6 %. No t'agafis a les baranes: si et cal, baixa la inclinació. Has de poder parlar però notar-ho. Apunta els minuts." },
     'd-sentadilla-smith': { name: "Sentadilla a la màquina Smith", cue: "Al gimnàs nou la sentadilla és a la Smith: un altre exercici, així que comença de zero i no es compara amb els 105 de barra lliure. Apunta sempre el TOTAL de discos dels dos costats. Quatre sèries al mateix pes i anota el RIR: sense ell, l'app puja pes només per repeticions." },
     'd-remo-maquina-unilateral': { name: "Rem assegut unilateral a màquina", cue: "Mateix gest que el rem amb manuella, però assegut i amb el pit recolzat. Un braç cada vegada, pausa d'1 s enrere amb el colze enganxat. Apunta el que marca la màquina." },
     'a-press-pecho-maquina': { name: "Press de pit a màquina de discos", cue: "Màquina guiada amb discos als costats. Apunta sempre el pes d'UN costat, igual que a la Smith. Esquena enganxada al respatller i baixa controlant 2 s." },

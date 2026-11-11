@@ -147,6 +147,12 @@ s = suggest(reseteada, [set(0, 80, 6, 1, '2026-08-31'), set(0, 72.5, 8, 2, '2026
 assert.equal(s.action, 'up');
 assert.equal(s.weight, 75, 'progresa desde el peso reseteado, no desde los 80 viejos');
 
+// Cardio: nunca sugiere subir kilos ni lastre, aunque se llegue al tope de minutos.
+const cinta = { ...banca, cardio: true, unit: 'peso-corporal', increment: null, startLoad: 0, sets: 1, repMin: 15, repMax: 20 };
+s = suggest(cinta, [set(0, 0, 20, null)], 2);
+assert.equal(s.action, 'hold');
+assert.ok(!/lastre/.test(s.reason), 'la cinta no lleva lastre');
+
 // Series anotadas a 0 reps (saltadas) no cuentan como tope alcanzado
 s = suggest(banca, [set(0, 77.5, 8, 2), set(1, 0, 0, null)], 3);
 assert.equal(s.action, 'up', 'las series vacías se ignoran');
@@ -199,7 +205,8 @@ for (const [uk, user] of Object.entries(USERS)) {
     if (idx === -1) continue;
     diasConCore++;
     const resto = d.exercises.slice(idx);
-    assert.ok(resto.every((e) => CORE.has(e.pattern)),
+    // El cardio es lo único que va detrás del core: cierra la sesión.
+    assert.ok(resto.every((e) => CORE.has(e.pattern) || e.cardio),
       `${uk}/${d.key}: hay ejercicios que no son de core después del primero de core`);
   }
   // El mínimo era 3 días. Jan pidió quitar la plancha del lunes y el dead bug del
@@ -209,7 +216,7 @@ for (const [uk, user] of Object.entries(USERS)) {
   assert.ok(diasConCore >= 2, `${uk}: solo ${diasConCore} días con core, hacen falta 2`);
 }
 assert.equal(allExercises('anna').length, 29, 'Anna: 29 ejercicios');
-assert.equal(allExercises('david').length, 29, 'David: 29 ejercicios');
+assert.equal(allExercises('david').length, 33, 'David: 33 ejercicios');
 // El lunes y el jueves son la misma sesión, así que sus 6 ejercicios se cuentan dos veces.
 assert.equal(allExercises('jan').length, 36, 'Jan: 36 ejercicios');
 

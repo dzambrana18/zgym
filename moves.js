@@ -175,6 +175,14 @@ export const MOVES = {
     b: S('M50 46 L28 66 L22 86') + S('M50 46 L72 66 L78 86'),
   },
 
+  // Cinta inclinada: el mismo paso que la caminata del granjero, sin mancuernas y con el
+  // suelo en cuesta.
+  cardio: {
+    base: S('M8 96 L92 86') + C(50, 14, 6) + S('M38 25 H62') + S('M50 20 V50'),
+    a: S('M38 25 L34 42') + S('M62 25 L66 42') + S('M50 50 L40 72 L37 92') + S('M50 50 L60 70 L66 89'),
+    b: S('M38 25 L42 42') + S('M62 25 L58 42') + S('M50 50 L60 72 L63 89') + S('M50 50 L40 70 L34 92'),
+  },
+
   // Caminata del granjero: los brazos solo cuelgan, lo que se alterna son las piernas.
   'caminata-granjero': {
     base: S('M8 92 H92') + C(50, 14, 6) + S('M38 25 H62') + S('M50 20 V50')

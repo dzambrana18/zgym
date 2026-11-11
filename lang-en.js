@@ -133,6 +133,7 @@ export const EN = {
     colWeight: 'Weight',
     colReps: 'Reps',
     colSecs: 'Secs',
+    colMins: 'Min',
     perHand: 'kg per hand',
     bodyweight: 'Bodyweight',
     nudgeHint: 'adjust if the real RIR does not match',
@@ -255,6 +256,7 @@ export const EN = {
     updating: 'Updating…',
 
     sugStart: 'First time: the plan’s starting load. Adjust it until the target RIR is real.',
+    sugCardio: 'Same pace and incline. If you reach 20 minutes without holding on, raise the incline one notch.',
     sugHoldReps: 'You have not reached {0} on every set yet: repeat the weight and try to add 1 rep.',
     sugHoldRir: 'You hit the top of the range but with no margin (RIR below {0}): hold this weight one more session.',
     sugLoadBw: 'Top of the range completed: add 2.5 kg of load or go up to {0} reps.',
@@ -317,6 +319,7 @@ export const EN = {
   },
 
   ex: {
+    'd-cinta': { name: "Incline treadmill walk", cue: "Walk, do not run: 5.5 km/h at 8 % incline, 15 to 20 minutes after the weights. First week, 5 km/h at 6 %. Do not hold the rails: if you need to, lower the incline. You should be able to talk but feel it. Log the minutes." },
     'd-sentadilla-smith': { name: "Smith machine squat", cue: "At the new gym the squat is on the Smith: a different exercise, so it starts from zero and is not compared with the 105 free-bar squat. Always log the TOTAL plates on both sides. Four sets at the same weight and log the RIR: without it the app raises the weight on reps alone." },
     'd-remo-maquina-unilateral': { name: "Seated single-arm machine row", cue: "Same movement as the dumbbell row, but seated with your chest supported. One arm at a time, 1 s pause at the back with the elbow tucked. Log what the machine shows." },
     'a-press-pecho-maquina': { name: "Plate-loaded chest press machine", cue: "Guided machine with plates on the sides. Always log the weight of ONE side, same as on the Smith. Back against the pad and lower under control for 2 s." },

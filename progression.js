@@ -118,6 +118,17 @@ export function suggest(exercise, records, week) {
     };
   }
 
+  // Cardio: no hay carga que subir ni lastre que añadir; el objetivo es hacerlo.
+  if (exercise.cardio) {
+    return {
+      weight: 0,
+      reason: 'Mismo ritmo e inclinación. Si llegas a 20 minutos sin agarrarte, sube un punto de inclinación.',
+      reasonKey: 'sugCardio', reasonArgs: [],
+      last: `${sessions[0].date} · ${sessions[0].sets.map((x) => x.reps).join('/')} min`,
+      action: 'hold',
+    };
+  }
+
   const last = sessions[0];
   const done = last.sets.filter((s) => s.reps > 0);
   const weight = done.length
