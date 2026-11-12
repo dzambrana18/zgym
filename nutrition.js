@@ -30,6 +30,50 @@ export const TARGETS = {
 
 // cat: desayuno | comida | cena | snack
 export const MEALS = [
+  // --- la dieta de David (noviembre de 2026): la que ya le funcionó, por bloques, con el
+  // peso en crudo y el aproximado ya cocinado. Es la misma hoja que tiene impresa.
+  {
+    key: "d-porridge", cat: "desayuno", name: "Porridge de avena con proteína",
+    kcal: 500, prot: 46, min: 3, price: 1.2,
+    ingredients: ["300 ml de leche semidesnatada", "45 g de copos de avena o crema de arroz", "40 g de proteína en polvo", "150 g de fresas, o medio plátano, manzana o naranja"],
+    steps: ["Mezcla la leche con la avena y la proteína hasta que no queden grumos.", "Añade la fruta troceada por encima.", "Se puede dejar hecho la noche antes en la nevera."],
+    tip: "Desayuno de tu dieta. Sin huevo y listo en tres minutos.",
+  },
+  {
+    key: "d-tostadas-pollo", cat: "desayuno", name: "Tostadas de pollo y queso de cabra",
+    kcal: 496, prot: 45, min: 8, price: 1.9,
+    ingredients: ["2 rebanadas de pan de molde integral (64 g)", "140 g de pechuga de pollo o de pavo en crudo (≈105 g ya cocinada)", "1 rodaja de queso de cabra", "1 pieza de fruta"],
+    steps: ["Tuesta el pan si quieres.", "Haz la pechuga a la plancha, al horno o en air fryer y ponla sobre el pan.", "Parte la rodaja de queso en dos y reparte un trozo en cada tostada."],
+    tip: "La alternativa al porridge cuando apetece salado.",
+  },
+  {
+    key: "d-comida-bloques", cat: "comida", name: "Comida por bloques (táper)",
+    kcal: 675, prot: 63, min: 20, price: 3.2,
+    ingredients: ["Proteína, elige una (crudo → ya cocinado): pechuga de pollo 180 g → 135 g · pechuga de pavo 185 g → 140 g · chuleta al ajillo Hacendado 210 g → 150 g · bacalao 260 g → 210 g · merluza 230 g → 185 g · dorada 230 g → 185 g", "Hidrato, elige uno (crudo → ya cocinado): arroz 40 g → 110 g · pasta 35-40 g → 90 g · patata 160 g → 155 g · boniato 155 g → 150 g · ñoquis 80 g → 100 g · guisantes 170 g → 165 g · o judía verde 225 g más la mitad de otro hidrato", "Verdura al gusto: 200 g", "Grasa, elige una: mozzarella fresca 60 g · aguacate 100 g · frutos secos naturales 25 g · 1 lata de atún en aceite de oliva escurrida · 2 huevos L (como mucho 2 días por semana)", "Aceite de oliva: 5 ml, en crudo sobre el plato", "Fruta: 1 pieza, o 2 mandarinas, 200 g de piña, 330 g de melón o sandía, o 300 g de fresas"],
+    steps: ["Elige una opción de cada bloque y pésala en crudo. Si ya está cocinada, usa el segundo peso: es aproximado.", "Cocina a la plancha, horno, air fryer, hervido o al vapor. En la plancha, unas gotas de aceite extendidas con papel.", "Monta el táper y añade el aceite en crudo. La fruta, de postre."],
+    tip: "Lo exacto es pesar en crudo. Para lo que no esté en la lista: la carne cocinada pesa un 25 % menos, el pescado un 20 % menos, el arroz cocido casi el triple y la pasta algo más del doble.",
+  },
+  {
+    key: "d-merienda-queso", cat: "snack", name: "Queso batido con proteína, frutos secos y fruta",
+    kcal: 500, prot: 49, min: 2, price: 1.7,
+    ingredients: ["250 g de queso fresco batido 0 %", "30 g de proteína en polvo", "25 g de cóctel de frutos secos natural", "12 g de nueces", "1 pieza de fruta"],
+    steps: ["Mezcla el queso batido con la proteína.", "Añade los frutos secos, las nueces y la fruta por encima."],
+    tip: "La merienda de antes del gimnasio. Se lleva hecha en un táper.",
+  },
+  {
+    key: "d-merienda-ensalada", cat: "snack", name: "Ensalada de tomate, atún y mozzarella con natilla proteica",
+    kcal: 502, prot: 44, min: 5, price: 2.3,
+    ingredients: ["250 g de tomate cherry o normal", "75 g de mozzarella fresca", "1 lata de atún al natural (60 g)", "1 tostada de pan Wasa", "1 natilla proteica Hacendado", "1 pieza de fruta"],
+    steps: ["Trocea el tomate y la mozzarella y mézclalos con el atún escurrido.", "Acompaña con la tostada. La natilla y la fruta, de postre."],
+    tip: "La alternativa salada al queso batido.",
+  },
+  {
+    key: "d-cena-bloques", cat: "cena", name: "Cena por bloques",
+    kcal: 675, prot: 65, min: 20, price: 3.4,
+    ingredients: ["Proteína, elige una (crudo → ya cocinado): pechuga de pollo 200 g → 150 g · pechuga de pavo 205 g → 155 g · chuleta al ajillo Hacendado 235 g → 170 g · bacalao 285 g → 230 g · merluza 255 g → 205 g · dorada 255 g → 205 g · contramuslo de pollo 185 g → 135 g · filete de ternera 185 g → 135 g · muslo de conejo 180 g → 130 g", "Hidrato, elige uno (crudo → ya cocinado): arroz 40 g → 110 g · pasta 35-40 g → 90 g · patata 160 g → 155 g · boniato 155 g → 150 g · ñoquis 80 g → 100 g · guisantes 170 g → 165 g · o judía verde 225 g más la mitad de otro hidrato", "Verdura al gusto: 200 g, cruda o cocinada", "Complemento, solo uno: aceite de oliva 10 ml · tomate frito receta artesana Hacendado 40 g · queso rallado para fundir 30 g. Con contramuslo, ternera o conejo: aceite 8 ml, tomate frito 32 g o queso 22 g", "Postre: 1 natilla proteica Hacendado (120 g)"],
+    steps: ["Elige una opción de cada bloque y pésala en crudo. Si ya está cocinada, usa el segundo peso: es aproximado.", "Cocina a la plancha, horno, air fryer, hervido o al vapor.", "Cocina doble ración de proteína: la segunda es el táper de mañana."],
+    tip: "Comida y cena son intercambiables. Si cenas fuera algo como una pizza (1.000-1.200 kcal), ese día no meriendes.",
+  },
   // ---------------------------------------------------------------- desayunos
   {
     key: 'queso-batido-proteina', cat: 'desayuno', name: 'Queso batido con proteína, avena y plátano',
@@ -191,52 +235,22 @@ export const SAMPLE_DAY = {
     { key: 'requeson-fruta', slot: 'Antes de dormir' },
     { key: 'yogur-almendras', slot: 'Post-entreno', half: true },
   ],
-  // Cinco comidas, no siete: se levanta a las 7:30, sale a las 7:50, come de táper en el
-  // trabajo, entrena hasta las 19:00 y llega a casa a las 20:30. Todo lo que pase de
-  // 12 minutos de cocina entre semana no se hace, y una dieta que no se hace no es dieta.
+  // Su dieta impresa: cuatro comidas. La comida y la cena van por bloques (se elige una
+  // opción de cada uno), así que el día de ejemplo ES la dieta entera, no una muestra.
   david: [
-    { key: 'queso-batido-proteina', slot: 'Desayuno' },
-    { key: 'yogur-almendras', slot: 'Media mañana' },
-    { key: 'arroz-pollo', slot: 'Comida' },
-    { key: 'batido-proteina', slot: 'Media tarde' },
-    { key: 'pollo-hummus', slot: 'Cena' },
-    { key: 'requeson-fruta', slot: 'Antes de dormir' },
+    { key: 'd-porridge', slot: 'Desayuno' },
+    { key: 'd-comida-bloques', slot: 'Comida' },
+    { key: 'd-merienda-queso', slot: 'Merienda' },
+    { key: 'd-cena-bloques', slot: 'Cena' },
   ],
 };
 
 
-// Rotación semanal. Solo David la tiene escrita: es el único que come de táper con
-// horario cerrado y necesita saber qué toca el jueves sin pensarlo. Para el resto, el
-// día de ejemplo repetido es exactamente lo que ya se les enseñaba, así que no se
-// inventan siete días de datos que nadie ha pedido.
-//
-// El desayuno, la media mañana, la media tarde y la toma de antes de dormir son fijas:
-// lo que rota es la comida y la cena, que es lo único que se cocina.
-const D_FIJAS = [
-  { key: 'queso-batido-proteina', slot: 'Desayuno' },
-  { key: 'yogur-almendras', slot: 'Media mañana' },
-  { key: 'batido-proteina', slot: 'Media tarde' },
-  { key: 'requeson-fruta', slot: 'Antes de dormir' },
-];
-const diaDavid = (comida, cena) => [
-  D_FIJAS[0], D_FIJAS[1],
-  { key: comida, slot: 'Comida' },
-  D_FIJAS[2],
-  { key: cena, slot: 'Cena' },
-  D_FIJAS[3],
-];
-
-export const WEEK_PLAN = {
-  david: [
-    { day: 1, meals: diaDavid('arroz-pollo', 'pollo-hummus') },
-    { day: 2, meals: diaDavid('pollo-boniato', 'revuelto-gambas') },
-    { day: 3, meals: diaDavid('pasta-atun', 'pollo-hummus') },
-    { day: 4, meals: diaDavid('arroz-pollo', 'merluza-verduras') },
-    { day: 5, meals: diaDavid('lentejas-huevo', 'pollo-hummus') },
-    { day: 6, meals: diaDavid('wok-ternera', 'ensalada-completa') },
-    { day: 0, meals: diaDavid('pollo-boniato', 'tortilla-patata') },
-  ],
-};
+// Rotación semanal con lista de la compra. Ahora mismo nadie la usa: David la tuvo en
+// septiembre de 2026 y pasó a una dieta por bloques, donde cada día se elige. Se deja el
+// mecanismo porque la pantalla y la lista de la compra siguen funcionando si alguien
+// vuelve a tener un plan fijo de siete días.
+export const WEEK_PLAN = {};
 
 /** Los 7 días del plan, o null si ese usuario solo tiene día de ejemplo. */
 export const weekPlan = (userKey) => WEEK_PLAN[userKey] || null;
